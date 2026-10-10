@@ -10,12 +10,12 @@ const L = ({ l, children }) => <label className="m" style={{ display: 'flex', fl
 
 export default function NewAjo() {
   const { user, profile } = useRequireAuth(), r = useRouter();
-  const [f, setF] = useState({ name: '', amount: '2000', frequencyDays: '3', dueTime: '18:00', lateFee: '100', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const [f, setF] = useState({ name: '', desc: '', amount: '2000', frequencyDays: '3', dueTime: '18:00', lateFee: '100', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function create(e) {
     e.preventDefault(); setBusy(true); setErr('');
     const gref = doc(collection(db, 'groups')), code = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
-    const g = { name: f.name.trim(), adminId: user.uid, adminName: profile?.name || 'Admin', amount: +f.amount, frequencyDays: +f.frequencyDays, dueTime: f.dueTime, lateFee: +f.lateFee,
+    const g = { name: f.name.trim(), description: f.desc.trim(), adminId: user.uid, adminName: profile?.name || 'Admin', amount: +f.amount, frequencyDays: +f.frequencyDays, dueTime: f.dueTime, lateFee: +f.lateFee,
       acct: { bank: f.bank.trim(), number: f.number.trim(), name: f.acctName.trim() }, members: [user.uid], order: [user.uid], memberCount: 1, startAt: midnight(Date.now()), inviteCode: code, createdAt: Date.now() };
     const b = writeBatch(db);
     b.set(gref, g);
@@ -32,6 +32,7 @@ export default function NewAjo() {
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Create an Ajo</h1>
       <form onSubmit={create} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <L l="Group name"><input className="inp" value={f.name} onChange={set('name')} required placeholder="Lagos Traders Ajo" /></L>
+        <L l="Description (optional)"><textarea className="inp" style={{ height: 84, padding: 12 }} value={f.desc} onChange={set('desc')} placeholder="Rules, payment day, anything members should know" /></L>
         <div style={{ display: 'flex', gap: 10 }}>
           <L l={'Contribution (\u20A6)'}><input className="inp" type="number" min="100" value={f.amount} onChange={set('amount')} required inputMode="numeric" /></L>
           <L l={'Late fee (\u20A6)'}><input className="inp" type="number" min="0" value={f.lateFee} onChange={set('lateFee')} required inputMode="numeric" /></L>

@@ -9,6 +9,7 @@ export const adb = () => getFirestore(app());
 export async function push(uids, { title, body, link }) {
   const db = adb(); let sent = 0;
   for (const uid of [...new Set(uids)].filter(Boolean)) {
+    await db.collection('users/' + uid + '/notifications').add({ title, body, link: link || '/', at: Date.now(), read: false });
     const ref = db.doc('users/' + uid), tokens = ((await ref.get()).data() || {}).fcmTokens || [];
     if (!tokens.length) continue;
     const r = await getMessaging(app()).sendEachForMulticast({ tokens, data: { title, body, link: link || '/' }, webpush: { headers: { Urgency: 'high' } } });

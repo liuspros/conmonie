@@ -25,3 +25,8 @@ Push to GitHub, import in Vercel, add the variables from `.env.example` and depl
 3. Set `CRON_SECRET` on Vercel to a long random string.
 4. GitHub repo > Settings > Secrets and variables > Actions: add `CRON_SECRET` (same value) and `APP_URL` (for example https://conmonie.vercel.app). `.github/workflows/reminders.yml` then calls `/api/cron/reminders` every 15 minutes (due-time, late and packing-day reminders, each sent once).
 5. Republish `firestore.rules`. Each member turns notifications on from the Me tab. On iPhone the app must be added to the Home Screen first.
+
+## Group tools
+- Tap the group name in the chat for Group info: description, photo (upload or preset), members, remove member, packing order, admins-only messaging, invite link, leave group.
+- The checklist and "contribution confirmed" cards are posted into the chat each time they change, and a new checklist is posted at the start of every round.
+- The bell on Home opens the notification centre. Entries are created by the server, so `FIREBASE_SERVICE_ACCOUNT` must be set. Republish `firestore.rules` after updating.
