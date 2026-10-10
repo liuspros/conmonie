@@ -12,7 +12,7 @@ import Skeleton from '@/components/Skeleton';
 
 export default function Home() {
   const { user, profile } = useRequireAuth(), r = useRouter();
-  const [groups, setGroups] = useState(null), [streak, setStreak] = useState(0), [link, setLink] = useState(''), [open, setOpen] = useState(false);
+  const [hi, setHi] = useState('Hello'), [groups, setGroups] = useState(null), [streak, setStreak] = useState(0), [link, setLink] = useState(''), [open, setOpen] = useState(false);
   useEffect(() => {
     if (!user) return;
     return onSnapshot(query(collection(db, 'groups'), where('members', 'array-contains', user.uid)), async (s) => {
@@ -22,7 +22,7 @@ export default function Home() {
       setStreak(Math.max(0, ...ms.map((m) => (m && m.exists() ? m.data().streak || 0 : 0))));
     });
   }, [user]);
-  const hour = new Date().getHours(), hi = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  useEffect(() => { const h = new Date().getHours(); setHi(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'); }, []);
   const goJoin = () => { const c = link.trim().split('/').filter(Boolean).pop(); if (c) r.push('/join/' + c); };
   return (
     <main className="app">

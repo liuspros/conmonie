@@ -6,6 +6,7 @@ export const metadata = {
   description: 'Run your Ajo with confidence',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Conmonie' },
+  other: { 'mobile-web-app-capable': 'yes' },
 };
 export const viewport = { themeColor: '#0A0A0A', viewportFit: 'cover', width: 'device-width', initialScale: 1 };
 
