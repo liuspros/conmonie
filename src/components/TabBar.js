@@ -16,7 +16,7 @@ export default function TabBar() {
   return (
     <nav className="tab" aria-label="Main">
       {TABS.map(([h, l, i]) => (
-        <Link key={h} href={h} className={'ti' + (on(h) ? ' on' : '')}>{i}{l}</Link>
+        <Link key={h} href={h} data-tour={'tab-' + l.toLowerCase()} className={'ti' + (on(h) ? ' on' : '')}>{i}{l}</Link>
       ))}
     </nav>
   );

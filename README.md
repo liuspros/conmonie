@@ -34,3 +34,8 @@ Push to GitHub, import in Vercel, add the variables from `.env.example` and depl
 ## App PIN and offline
 - Me > Fingerprint or Face ID lock: optional. Uses the phone's own biometric check (WebAuthn platform authenticator); only a credential id is stored on the device. The app locks on open and after 30 seconds in the background. Logging out removes it.
 - `public/sw.js` saves pages, scripts and images so the app opens offline; Firestore keeps data in its offline cache. Bump `V` in `sw.js` to force a fresh cache. It only registers in production builds.
+
+## Install and app guide
+- `InstallContext` captures the browser install prompt. Android and desktop get a one-tap Install app button; iPhone gets Add to Home Screen steps.
+- Home shows an install card once on the first visit (after the guide); Me > Install app is always there until the app is installed.
+- `components/Tour.js` is a reusable spotlight guide. Home and the group chat each show it on first visit. Targets are marked with `data-tour="..."`. Me > App guide replays it.

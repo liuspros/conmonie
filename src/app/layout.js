@@ -3,6 +3,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { LockProvider } from '@/context/LockContext';
 import OfflineBanner from '@/components/OfflineBanner';
 import SWRegister from '@/components/SWRegister';
+import { InstallProvider } from '@/context/InstallContext';
 
 export const metadata = {
   title: 'Conmonie',
@@ -16,7 +17,7 @@ export const viewport = { themeColor: '#0A0A0A', viewportFit: 'cover', width: 'd
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body><AuthProvider><OfflineBanner /><SWRegister /><LockProvider>{children}</LockProvider></AuthProvider></body>
+      <body><AuthProvider><InstallProvider><OfflineBanner /><SWRegister /><LockProvider>{children}</LockProvider></InstallProvider></AuthProvider></body>
     </html>
   );
 }

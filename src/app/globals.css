@@ -28,3 +28,5 @@ h1, h2, p { margin: 0; }
 @keyframes sh { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 :focus-visible { outline: 2px solid #0A0A0A; outline-offset: 2px; }
+.spot { transition: left .25s, top .25s, width .25s, height .25s; }
+@media (prefers-reduced-motion: reduce) { .spot { transition: none; } }

@@ -10,6 +10,13 @@ import { notify } from '@/lib/notify';
 import Av from '@/components/Av';
 import TabBar from '@/components/TabBar';
 import Skeleton from '@/components/Skeleton';
+import Tour from '@/components/Tour';
+
+const GSTEPS = [
+  { target: 'g-info', noScroll: true, title: 'Group info', body: 'Tap the group name to see members, the description, the packing order and the group rules.' },
+  { target: 'g-pay', noScroll: true, title: 'Pay contribution', body: 'On payment day tap here. You will see the amount, the account to pay and where to upload your receipt.' },
+  { target: 'g-input', noScroll: true, title: 'Group chat', body: 'Chat with the group here. Checklists and confirmations are posted in the chat every time something changes.' },
+];
 
 const LABEL = { confirmed: 'Confirmed', pending: 'Awaiting admin', none: 'Not paid' };
 const hm = (t) => new Date(t).toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
@@ -76,12 +83,12 @@ export default function Group() {
         <div className="dark r" style={{ borderRadius: '0 0 28px 28px', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 }}>
             <Link href="/" aria-label="Back" style={{ color: '#fff', fontSize: 28, textDecoration: 'none' }}>&lsaquo;</Link>
-            <Link href={'/g/' + id + '/info'} style={{ display: 'flex', gap: 10, alignItems: 'center', color: '#fff', textDecoration: 'none', minWidth: 0 }}>
+            <Link data-tour="g-info" href={'/g/' + id + '/info'} style={{ display: 'flex', gap: 10, alignItems: 'center', color: '#fff', textDecoration: 'none', minWidth: 0 }}>
               <Av i={g.avatar || 0} src={g.dp} size={40} />
               <div style={{ minWidth: 0 }}><b style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</b><div style={{ fontSize: 12, color: '#B8BCC2' }}>{g.members.length} members</div></div>
             </Link>
           </div>
-          <Link href={'/g/' + id + '/pay'} className="pill" style={{ textDecoration: 'none', flex: 'none' }}>Pay contribution</Link>
+          <Link data-tour="g-pay" href={'/g/' + id + '/pay'} className="pill" style={{ textDecoration: 'none', flex: 'none' }}>Pay contribution</Link>
         </div>
         {ci.isPackingDay && packer && <div className="glass" style={{ margin: '8px 20px 0', padding: '10px 14px', fontSize: 13 }}><b>Pinned &middot; Packing day</b><br />{packer.name} packs today.{packer.payout ? ' ' + packer.payout.bank + ' ' + packer.payout.number : ' No payout account saved yet.'}</div>}
       </div>
@@ -124,11 +131,12 @@ export default function Group() {
       </div>
       {locked
         ? <div className="m" style={{ position: 'sticky', bottom: 92, textAlign: 'center', padding: '10px 20px', marginTop: 'auto' }}>Only admins can send messages in this group.</div>
-        : <form onSubmit={send} style={{ position: 'sticky', bottom: 92, display: 'flex', gap: 8, padding: '12px 20px 0', marginTop: 'auto' }}>
+        : <form data-tour="g-input" onSubmit={send} style={{ position: 'sticky', bottom: 92, display: 'flex', gap: 8, padding: '12px 20px 0', marginTop: 'auto' }}>
             <input className="inp" style={{ borderRadius: 25, height: 48 }} placeholder="Type here" value={text} onChange={(e) => setText(e.target.value)} />
             <button className="btn" style={{ width: 48, height: 48 }} aria-label="Send">&uarr;</button>
           </form>}
       <div style={{ height: 96 }} /><TabBar />
+      <Tour id="group" steps={GSTEPS} enabled />
     </main>
   );
 }
