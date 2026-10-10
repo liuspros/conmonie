@@ -18,7 +18,7 @@ export default function PushToggle() {
     if (perm !== 'granted') return setSt(perm === 'denied' ? 'blocked' : 'off');
     const { getMessaging, getToken } = await import('firebase/messaging');
     try {
-      await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.register('/sw.js');
       const reg = await navigator.serviceWorker.ready;
       const token = await getToken(getMessaging(app), { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY, serviceWorkerRegistration: reg });
       if (token) { await updateDoc(doc(db, 'users', user.uid), { fcmTokens: arrayUnion(token) }); setSt('on'); }

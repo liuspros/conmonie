@@ -1,1 +1,1 @@
-module.exports = { reactStrictMode: true, experimental: { serverComponentsExternalPackages: ['firebase-admin'] } };
+module.exports = { reactStrictMode: true, async headers() { return [{ source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }, { key: 'Service-Worker-Allowed', value: '/' }] }]; }, experimental: { serverComponentsExternalPackages: ['firebase-admin'] } };

@@ -30,3 +30,7 @@ Push to GitHub, import in Vercel, add the variables from `.env.example` and depl
 - Tap the group name in the chat for Group info: description, photo (upload or preset), members, remove member, packing order, admins-only messaging, invite link, leave group.
 - The checklist and "contribution confirmed" cards are posted into the chat each time they change, and a new checklist is posted at the start of every round.
 - The bell on Home opens the notification centre. Entries are created by the server, so `FIREBASE_SERVICE_ACCOUNT` must be set. Republish `firestore.rules` after updating.
+
+## App PIN and offline
+- Me > Fingerprint or Face ID lock: optional. Uses the phone's own biometric check (WebAuthn platform authenticator); only a credential id is stored on the device. The app locks on open and after 30 seconds in the background. Logging out removes it.
+- `public/sw.js` saves pages, scripts and images so the app opens offline; Firestore keeps data in its offline cache. Bump `V` in `sw.js` to force a fresh cache. It only registers in production builds.

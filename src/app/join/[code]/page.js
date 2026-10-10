@@ -13,6 +13,7 @@ export default function Join() {
   const [inv, setInv] = useState(undefined), [ok, setOk] = useState(false), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   useEffect(() => { if (user) getDoc(doc(db, 'invites', code)).then((s) => setInv(s.exists() ? s.data() : null)).catch(() => setInv(null)); }, [user, code]);
   async function join() {
+    if (!navigator.onLine) { setErr('You are offline. Connect to the internet to join.'); return; }
     setBusy(true); setErr('');
     try {
       const gref = doc(db, 'groups', inv.gid), b = writeBatch(db);

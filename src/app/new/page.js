@@ -13,7 +13,7 @@ export default function NewAjo() {
   const [f, setF] = useState({ name: '', desc: '', amount: '2000', frequencyDays: '3', dueTime: '18:00', lateFee: '100', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function create(e) {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); if (!navigator.onLine) { setErr('You are offline. Connect to the internet to create an Ajo.'); return; } setBusy(true); setErr('');
     const gref = doc(collection(db, 'groups')), code = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
     const g = { name: f.name.trim(), description: f.desc.trim(), adminId: user.uid, adminName: profile?.name || 'Admin', amount: +f.amount, frequencyDays: +f.frequencyDays, dueTime: f.dueTime, lateFee: +f.lateFee,
       acct: { bank: f.bank.trim(), number: f.number.trim(), name: f.acctName.trim() }, members: [user.uid], order: [user.uid], memberCount: 1, startAt: midnight(Date.now()), inviteCode: code, createdAt: Date.now() };

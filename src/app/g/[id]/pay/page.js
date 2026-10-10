@@ -34,6 +34,7 @@ export default function Pay() {
     e.target.value = '';
   }
   async function submit() {
+    if (!navigator.onLine) { window.alert('You are offline. Connect to the internet to submit your receipt.'); return; }
     setBusy(true);
     const names = (profile?.name || '').toLowerCase().split(/\s+/);
     const flagsFor = async (q) => {
