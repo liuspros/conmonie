@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cfg } from '@/lib/config';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
@@ -7,7 +8,7 @@ const PROMPT = 'Read this Nigerian bank transfer receipt. Reply with JSON only, 
 export async function POST(req) {
   // Only signed-in users may spend the API key.
   const token = (req.headers.get('authorization') || '').replace('Bearer ', '');
-  const v = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + process.env.NEXT_PUBLIC_FIREBASE_API_KEY, {
+  const v = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + cfg.apiKey, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }),
   });
   if (!v.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });

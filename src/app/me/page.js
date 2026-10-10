@@ -7,6 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import Av, { PRESETS } from '@/components/Av';
 import TabBar from '@/components/TabBar';
+import PushToggle from '@/components/PushToggle';
 
 export default function Me() {
   const { user, profile } = useRequireAuth();
@@ -26,8 +27,10 @@ export default function Me() {
         {['bank', 'number', 'name'].map((k) => <input key={k} className="inp" style={{ background: 'rgba(255,255,255,.12)', border: 0, color: '#fff' }} placeholder={{ bank: 'Bank', number: 'Account number', name: 'Account name' }[k]} value={p[k]} onChange={(e) => setP({ ...p, [k]: e.target.value })} required />)}
         <button className="btn2" style={{ height: 44 }}>{saved ? 'Saved' : 'Save account'}</button>
       </form>
+      <PushToggle />
       <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Link href="/terms" style={{ color: 'inherit', textDecoration: 'none' }} className="r"><span>Terms and conditions</span><span className="m">&rsaquo;</span></Link>
+        <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }} className="r"><span>Privacy and policy</span><span className="m">&rsaquo;</span></Link>
         <button className="r" style={{ background: 'none', textAlign: 'left', fontSize: 16 }} onClick={() => signOut(auth)}><span>Log out</span></button>
       </div>
       <TabBar />

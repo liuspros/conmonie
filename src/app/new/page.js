@@ -6,6 +6,8 @@ import { db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import { midnight } from '@/lib/utils';
 
+const L = ({ l, children }) => <label className="m" style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, flex: 1, minWidth: 0 }}>{l}{children}</label>;
+
 export default function NewAjo() {
   const { user, profile } = useRequireAuth(), r = useRouter();
   const [f, setF] = useState({ name: '', amount: '2000', frequencyDays: '3', dueTime: '18:00', lateFee: '100', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false);
@@ -22,7 +24,6 @@ export default function NewAjo() {
     b.set(doc(collection(db, 'groups', gref.id, 'messages')), { type: 'system', text: g.name + ' was created', uid: user.uid, at: Date.now() });
     await b.commit(); r.replace('/g/' + gref.id);
   }
-  const L = ({ l, children }) => <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }} className="m">{l}{children}</label>;
   return (
     <main className="app">
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>Create an Ajo</h1>

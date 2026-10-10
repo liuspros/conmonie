@@ -7,6 +7,7 @@ import { useRequireAuth } from '@/context/AuthContext';
 import { cycleInfo, naira, haptic, compressImage, sha256 } from '@/lib/utils';
 import TabBar from '@/components/TabBar';
 import Skeleton from '@/components/Skeleton';
+import { notify } from '@/lib/notify';
 
 export default function Pay() {
   const { id } = useParams(), r = useRouter(), { user, profile } = useRequireAuth();
@@ -51,7 +52,7 @@ export default function Pay() {
       await setDoc(doc(db, 'groups', id, 'refs', q.hash), { uid: user.uid });
       if (q.x?.reference) await setDoc(doc(db, 'groups', id, 'refs', 'r_' + q.x.reference), { uid: user.uid });
     }
-    haptic(); setDone(true);
+    haptic(); setDone(true); notify('submitted', id);
   }
 
   if (done) return (

@@ -1,7 +1,9 @@
 const DAY = 864e5;
 export const naira = (n) => '\u20A6' + Number(n || 0).toLocaleString('en-NG');
 export const haptic = () => { try { navigator.vibrate && navigator.vibrate(12); } catch {} };
-export const midnight = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+// Nigeria is UTC+1 all year, so days are counted in WAT on the browser and the server alike.
+const TZ = 36e5;
+export const midnight = (t) => Math.floor((t + TZ) / DAY) * DAY - TZ;
 
 // One cycle = one contribution round. Packing day is the first day of each cycle.
 export function cycleInfo(g, now = Date.now()) {

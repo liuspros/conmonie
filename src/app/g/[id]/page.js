@@ -6,6 +6,7 @@ import { doc, collection, query, orderBy, where, onSnapshot, addDoc, getDoc, get
 import { db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import { cycleInfo, naira, haptic } from '@/lib/utils';
+import { notify } from '@/lib/notify';
 import Av from '@/components/Av';
 import TabBar from '@/components/TabBar';
 import Skeleton from '@/components/Skeleton';
@@ -39,10 +40,17 @@ export default function Group() {
     b.update(doc(db, 'groups', id, 'contributions', c.id), { status: 'confirmed', confirmedAt: Date.now() });
     b.update(doc(db, 'groups', id, 'members', c.uid), { streak, best: Math.max(m.best || 0, streak) });
     sys(b, c.name + "'s contribution confirmed by admin");
-    await b.commit(); haptic();
+    await b.commit(); haptic(); notify('confirmed', id, c.uid);
   }
-  async function reject(c) { const b = writeBatch(db); b.update(doc(db, 'groups', id, 'contributions', c.id), { status: 'rejected' }); sys(b, c.name + "'s receipt was not accepted"); await b.commit(); }
-  async function paidPacker() { const b = writeBatch(db); sys(b, 'Admin paid ' + (packer?.name || 'the packer') + ' for this round'); await b.commit(); }
+  async function reject(c) {
+    const why = (window.prompt('Why is this receipt not accepted? The member will see this.') || '').trim(); if (!why) return;
+    const b = writeBatch(db); b.update(doc(db, 'groups', id, 'contributions', c.id), { status: 'rejected', reason: why }); sys(b, c.name + "'s receipt was not accepted: " + why); await b.commit(); notify('rejected', id, c.uid);
+  }
+  async function shuffle() {
+    const o = [...g.order]; for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+    const b = writeBatch(db); b.update(doc(db, 'groups', id), { order: o }); sys(b, 'Admin shuffled the packing order'); await b.commit(); haptic();
+  }
+  async function paidPacker() { const b = writeBatch(db); sys(b, 'Admin paid ' + (packer?.name || 'the packer') + ' for this round'); await b.commit(); notify('packed', id, packer?.uid); }
   async function showRec(c) { if (recs[c.id]) return; const s = await getDocs(query(collection(db, 'groups', id, 'receipts'), where('cid', '==', c.id))); setRecs((p) => ({ ...p, [c.id]: s.docs.map((d) => d.data()) })); }
   const copyInvite = () => { navigator.clipboard.writeText(location.origin + '/join/' + g.inviteCode); haptic(); setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
@@ -61,6 +69,9 @@ export default function Group() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, fontSize: 14 }}>
             {g.members.map((u) => { const s = status(u); return <div key={u} className="r"><span>{members[u]?.name || '...'}</span><span className={'tag' + (s === 'confirmed' ? ' k' : '')}>{s === 'confirmed' ? 'Confirmed' : s === 'pending' ? 'Awaiting admin' : 'Not paid'}</span></div>; })}
           </div></div>
+        {(status(user.uid) === 'confirmed' || (ci.isPackingDay && ci.packerUid === user.uid)) && <div className="glass r"><div><b>{ci.isPackingDay && ci.packerUid === user.uid ? "It's your turn to be paid" : 'Your contribution is confirmed'}</b><div className="m">{ci.isPackingDay && ci.packerUid === user.uid ? 'The admin will pay your saved account today.' : 'Thank you for paying.'}</div></div><img src="/3d/party.png" width="64" height="64" alt="" /></div>}
+        <div className="glass"><div className="r"><b>Packing order</b>{isAdmin && ci.k === 0 && <button className="pill" style={{ background: '#E3E5E8' }} onClick={shuffle}>Shuffle</button>}</div>
+          <div className="m" style={{ marginTop: 6, lineHeight: 1.7 }}>{g.order.map((u, i) => (i + 1) + '. ' + (members[u]?.name || '...')).join('  \u00B7  ')}</div></div>
         {isAdmin && <div className="dark" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <b>Admin</b>
           <div className="r" style={{ fontSize: 13 }}><span style={{ color: '#B8BCC2' }}>Invite link</span><button className="pill" onClick={copyInvite}>{copied ? 'Copied' : 'Copy link'}</button></div>

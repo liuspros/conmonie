@@ -32,7 +32,8 @@ service cloud.firestore {
       match /contributions/{c} {
         allow read: if isMember(g);
         allow create: if isMember(g) && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
-        allow update: if isAdmin(g);
+        // Once confirmed or rejected, a decision is final (no silent edits by the admin).
+        allow update: if isAdmin(g) && resource.data.status == 'pending';
       }
       // Receipts (base64) are private: the sender and the admin only.
       match /receipts/{r} {
