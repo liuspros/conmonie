@@ -18,7 +18,7 @@ export default function Join() {
     try {
       const gref = doc(db, 'groups', inv.gid), b = writeBatch(db);
       b.update(gref, { members: arrayUnion(user.uid), order: arrayUnion(user.uid), memberCount: increment(1) });
-      b.set(doc(db, 'groups', inv.gid, 'members', user.uid), { name: profile?.name || 'Member', avatar: profile?.avatar || 0, streak: 0, best: 0 });
+      b.set(doc(db, 'groups', inv.gid, 'members', user.uid), { name: profile?.name || 'Member', avatar: profile?.avatar || 0, streak: 0, best: 0, termsAt: Date.now(), termsVersion: 1 });
       await b.commit(); r.replace('/g/' + inv.gid);
     } catch { setErr('Could not join. You may already be in this group.'); setBusy(false); }
   }

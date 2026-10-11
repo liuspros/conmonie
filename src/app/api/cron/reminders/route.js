@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adb, push, adminReady } from '@/lib/admin';
 import { cycleInfo, naira } from '@/lib/utils';
 export const runtime = 'nodejs';
@@ -15,6 +16,7 @@ export async function GET(req) {
   const now = Date.now(), db = adb(); let n = 0;
   for (const d of (await db.collection('groups').get()).docs) {
     const g = d.data(), id = d.id, ci = cycleInfo(g, now), link = '/g/' + id;
+    if (g.acct) { await db.doc(`groups/${id}/private/acct`).set(g.acct, { merge: true }); await d.ref.update({ acct: FieldValue.delete() }); } // older groups: hide the account from members
     const cons = (await db.collection(`groups/${id}/contributions`).where('cycle', '==', ci.k).get()).docs.map((x) => x.data());
     const unpaid = g.members.filter((u) => !cons.some((c) => c.uid === u && c.status !== 'rejected'));
     const nameOf = async (u) => ((await db.doc('users/' + u).get()).data() || {}).name || 'the packer';

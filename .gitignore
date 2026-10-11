@@ -2,3 +2,5 @@ node_modules
 .next
 .env.local
 .vercel
+public/models
+public/pdf.worker.min.js

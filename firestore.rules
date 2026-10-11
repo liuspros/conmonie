@@ -8,7 +8,11 @@ service cloud.firestore {
 
     match /users/{u} {
       allow read: if signed();
-      allow write: if signed() && request.auth.uid == u;
+      // verified, verifyStatus, verifiedAt and staff can only be set by the server.
+      allow create: if signed() && request.auth.uid == u
+        && !request.resource.data.keys().hasAny(['verified', 'verifyStatus', 'verifiedAt', 'staff']);
+      allow update: if signed() && request.auth.uid == u
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified', 'verifyStatus', 'verifiedAt', 'staff', 'legalName']);
       // In-app notification centre. Created by the server only; the owner reads and marks them read.
       match /notifications/{n} { allow read, update, delete: if signed() && request.auth.uid == u; }
     }
@@ -31,6 +35,9 @@ service cloud.firestore {
           && !(request.auth.uid in request.resource.data.members)
           && request.resource.data.members.size() == resource.data.members.size() - 1);
 
+      // The payment account lives here, not on the group. Members get it only from the server (/api/pay/info).
+      match /private/{d} { allow read, write: if isAdmin(g); }
+
       match /members/{u} {
         allow read: if isMember(g);
         allow create: if signed() && request.auth.uid == u;
@@ -39,22 +46,21 @@ service cloud.firestore {
       }
       match /messages/{m} {
         allow read: if isMember(g);
-        // Admin may post anything. Members may post text unless the admin switched the group to admins-only.
         allow create: if isMember(g) && request.resource.data.uid == request.auth.uid
           && (isAdmin(g) || (request.resource.data.type == 'text' && grp(g).get('onlyAdminsPost', false) != true));
       }
+      // Contributions and receipts are created only by the server (/api/contribute), which enforces the late-fee rule.
       match /contributions/{c} {
         allow read: if isMember(g);
-        allow create: if isMember(g) && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+        allow create: if false;
         // Once confirmed or rejected, a decision is final (no silent edits by the admin).
         allow update: if isAdmin(g) && resource.data.status == 'pending';
       }
-      // Receipts (base64) are private: the sender and the admin only.
       match /receipts/{r} {
         allow read: if signed() && (resource.data.uid == request.auth.uid || isAdmin(g));
-        allow create: if isMember(g) && request.resource.data.uid == request.auth.uid && request.resource.data.image.size() < 900000;
+        allow create: if false;
       }
-      match /refs/{h} { allow read, create: if isMember(g); }
+      // lateFees, refs, reminders: server only (no rules = no client access)
     }
   }
 }

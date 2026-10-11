@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { doc, collection, onSnapshot, updateDoc, deleteDoc, deleteField, writeBatch, arrayRemove, increment } from 'firebase/firestore';
+import { doc, collection, onSnapshot, updateDoc, deleteDoc, deleteField, writeBatch, arrayRemove, increment, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import { compressSquare, haptic } from '@/lib/utils';
@@ -11,7 +11,7 @@ import Skeleton from '@/components/Skeleton';
 
 export default function Info() {
   const { id } = useParams(), r = useRouter(), { user } = useRequireAuth();
-  const [g, setG] = useState(), [members, setMembers] = useState({}), [order, setOrder] = useState(null), [form, setForm] = useState(null), [copied, setCopied] = useState(false), [err, setErr] = useState('');
+  const [g, setG] = useState(), [members, setMembers] = useState({}), [order, setOrder] = useState(null), [form, setForm] = useState(null), [copied, setCopied] = useState(false), [err, setErr] = useState(''), [ver, setVer] = useState({}), [acct, setAcct] = useState(null), [acctSaved, setAcctSaved] = useState(false);
   useEffect(() => {
     if (!user) return;
     const off = [
@@ -20,6 +20,11 @@ export default function Info() {
     ];
     return () => off.forEach((f) => f());
   }, [user, id]);
+  useEffect(() => {
+    if (!g) return;
+    Promise.all(g.members.map((u) => getDoc(doc(db, 'users', u)).then((s) => [u, !!(s.data() || {}).verified]).catch(() => [u, false]))).then((e) => setVer(Object.fromEntries(e)));
+    if (g.adminId === user.uid) getDoc(doc(db, 'groups', id, 'private', 'acct')).then((s) => setAcct(s.exists() ? s.data() : { bank: '', number: '', name: '' })).catch(() => setAcct({ bank: '', number: '', name: '' }));
+  }, [g && g.members.length]);
   if (!g) return <main className="app"><Skeleton n={4} h={90} /></main>;
 
   const admin = g.adminId === user.uid, ord = order || g.order, f = form || { name: g.name, desc: g.description || '' };
@@ -42,6 +47,7 @@ export default function Info() {
     if (!self) sys(b, nm(u) + ' was removed by admin');
     await b.commit(); if (self) r.replace('/');
   });
+  const saveAcct = guard(async () => { await setDoc(doc(db, 'groups', id, 'private', 'acct'), acct); setAcctSaved(true); setTimeout(() => setAcctSaved(false), 1500); });
   const copy = () => { navigator.clipboard.writeText(location.origin + '/join/' + g.inviteCode); haptic(); setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
   return (
@@ -82,9 +88,14 @@ export default function Info() {
         <div className="r"><b>Members</b><span className="m">{g.members.length}</span></div>
         {[g.adminId, ...g.members.filter((u) => u !== g.adminId)].map((u) => (
           <div key={u} className="r"><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Av i={members[u]?.avatar || 0} size={36} /><div><div style={{ fontSize: 15 }}>{nm(u)}{u === user.uid ? ' (you)' : ''}</div><div className="m" style={{ fontSize: 12 }}>Streak {members[u]?.streak || 0}</div></div></div>
-            {u === g.adminId ? <span className="tag k">Admin</span> : admin && <button className="pill" style={{ background: '#E3E5E8' }} onClick={drop(u, false)}>Remove</button>}</div>))}
+            <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>{ver[u] && <span className="tag">Verified</span>}{u === g.adminId ? <span className="tag k">Admin</span> : admin && <><Link href={'/g/' + id + '/record/' + u} className="pill" style={{ background: '#E3E5E8', textDecoration: 'none' }}>Record</Link><button className="pill" style={{ background: '#E3E5E8' }} onClick={drop(u, false)}>Remove</button></>}</span></div>))}
       </div>
 
+      {admin && acct && <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}><b>Payment account</b><span className="m">Members pay contributions into this account. Only you and members who are on time, or have paid the late fee, can see it.</span>
+        <input className="inp" placeholder="Bank" value={acct.bank} onChange={(e) => setAcct({ ...acct, bank: e.target.value })} />
+        <input className="inp" placeholder="Account number" inputMode="numeric" maxLength={10} value={acct.number} onChange={(e) => setAcct({ ...acct, number: e.target.value })} />
+        <input className="inp" placeholder="Account name" value={acct.name} onChange={(e) => setAcct({ ...acct, name: e.target.value })} />
+        <button className="btn" style={{ height: 44 }} onClick={saveAcct}>{acctSaved ? 'Saved' : 'Save account'}</button></div>}
       {admin && <button className="btn2" onClick={copy}>{copied ? 'Invite link copied' : 'Copy invite link'}</button>}
       {!admin && <button className="btn2" onClick={drop(user.uid, true)}>Leave group</button>}
     </main>

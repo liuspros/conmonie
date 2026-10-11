@@ -10,6 +10,7 @@ import TabBar from '@/components/TabBar';
 import PushToggle from '@/components/PushToggle';
 import BiometricSettings from '@/components/BiometricSettings';
 import InstallSettings from '@/components/InstallSettings';
+import VerifyCard from '@/components/VerifyCard';
 import { useRouter } from 'next/navigation';
 import { clearBio } from '@/lib/biometric';
 
@@ -31,6 +32,7 @@ export default function Me() {
         {['bank', 'number', 'name'].map((k) => <input key={k} className="inp" style={{ background: 'rgba(255,255,255,.12)', border: 0, color: '#fff' }} placeholder={{ bank: 'Bank', number: 'Account number', name: 'Account name' }[k]} value={p[k]} onChange={(e) => setP({ ...p, [k]: e.target.value })} required />)}
         <button className="btn2" style={{ height: 44 }}>{saved ? 'Saved' : 'Save account'}</button>
       </form>
+      <VerifyCard />
       <InstallSettings />
       <BiometricSettings />
       <PushToggle />

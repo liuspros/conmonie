@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cfg } from '@/lib/config';
+import { sha, sigOf } from '@/lib/server';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
@@ -30,6 +31,6 @@ export async function POST(req) {
     }),
   });
   const j = await r.json();
-  try { return NextResponse.json(JSON.parse(String(j.content?.[0]?.text).match(/\{[\s\S]*\}/)[0])); }
+  try { const x = JSON.parse(String(j.content?.[0]?.text).match(/\{[\s\S]*\}/)[0]); return NextResponse.json({ ...x, sig: sigOf(sha(String(image)), x) }); }
   catch { return NextResponse.json({ error: 'unreadable' }, { status: 422 }); }
 }
