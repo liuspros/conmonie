@@ -17,15 +17,10 @@ export async function GET(req) {
   for (const d of (await db.collection('groups').get()).docs) {
     const g = d.data(), id = d.id, ci = cycleInfo(g, now), link = '/g/' + id;
     if (g.acct) { await db.doc(`groups/${id}/private/acct`).set(g.acct, { merge: true }); await d.ref.update({ acct: FieldValue.delete() }); } // older groups: hide the account from members
+    if (g.public) await db.doc('publicGroups/' + id).set({ memberCount: g.members.length, name: g.name, description: g.description || '' }, { merge: true });
     const cons = (await db.collection(`groups/${id}/contributions`).where('cycle', '==', ci.k).get()).docs.map((x) => x.data());
     const unpaid = g.members.filter((u) => !cons.some((c) => c.uid === u && c.status !== 'rejected'));
     const nameOf = async (u) => ((await db.doc('users/' + u).get()).data() || {}).name || 'the packer';
-    // A fresh checklist at the start of every round
-    if (ci.isPackingDay && await once(id, ci.k + '_list')) {
-      const ms = (await db.collection(`groups/${id}/members`).get()).docs, nm = Object.fromEntries(ms.map((x) => [x.id, x.data().name]));
-      const st = (u) => (cons.find((c) => c.uid === u && c.status !== 'rejected') || {}).status || 'none';
-      await db.collection(`groups/${id}/messages`).add({ type: 'checklist', text: 'Round ' + (ci.k + 1) + ' checklist', rows: g.members.map((u) => ({ uid: u, name: nm[u] || 'Member', s: st(u) })), uid: g.adminId, at: now });
-    }
     if (now >= ci.due - 2 * H && now < ci.due && unpaid.length && await once(id, ci.k + '_due'))
       n += await push(unpaid, { title: g.name, body: `Pay ${naira(g.amount)} before ${g.dueTime} to avoid the ${naira(g.lateFee)} late fee.`, link });
     if (now >= ci.due && now < ci.due + 2 * H && unpaid.length && await once(id, ci.k + '_late'))

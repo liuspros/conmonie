@@ -1,6 +1,6 @@
 // Conmonie service worker: offline pages + push notifications. Bump V to force a fresh cache.
-const V = 'conmonie-v2';
-const SHELL = ['/', '/login', '/new', '/me', '/activities', '/notifications', '/terms', '/privacy', '/offline', '/manifest.json', '/icon-192.png', '/3d/badge.png', '/3d/party.png', '/3d/rocket.jpg'];
+const V = 'conmonie-v3';
+const SHELL = ['/', '/login', '/new', '/me', '/activities', '/notifications', '/terms', '/privacy', '/offline', '/feed', '/scan', '/how', '/agreement', '/manifest.json', '/icon-192.png', '/3d/badge.png', '/3d/party.png', '/3d/rocket.jpg'];
 
 // Push (optional: if the Firebase script cannot load, offline support still works)
 try {

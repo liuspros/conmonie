@@ -40,10 +40,10 @@ Push to GitHub, import in Vercel, add the variables from `.env.example` and depl
 - Home shows an install card once on the first visit (after the guide); Me > Install app is always there until the app is installed.
 - `components/Tour.js` is a reusable spotlight guide. Home and the group chat each show it on first visit. Targets are marked with `data-tour="..."`. Me > App guide replays it.
 
-## Late fee (Paystack), verification and staff
-- **Env:** `PAYSTACK_SECRET_KEY` (use `sk_test_` first), `PLATFORM_LATE_FEE` (default 100). In Paystack > Settings > API Keys & Webhooks set the webhook URL to `https://YOUR-DOMAIN/api/paystack/webhook`.
-- **Flow:** after the due time `/g/[id]/pay` redirects to `/g/[id]/late`. The fee is paid on Paystack, confirmed server-side (return page and signed webhook) and stored in `groups/{id}/lateFees`. `/api/pay/info` only returns the admin's account once it is paid. `/api/contribute` is the only way to create a contribution and re-checks lateness itself. Platform revenue is logged in the `fees` collection.
-- **Account numbers** now live in `groups/{id}/private/acct`. Existing groups are migrated automatically by the reminder job.
-- **Verification:** Me > Identity check runs free on-device checks (liveness, face match, statement name/address). Results are a pre-screen; a staff member approves at `/staff`. To make yourself staff: Firebase console > Firestore > `users` > your document > add field `staff` (boolean) = `true`. Images are deleted when a decision is saved.
-- Face models and the PDF worker are copied into `public/` by `scripts/copy-assets.js` on `npm install`.
-- Republish `firestore.rules` after updating.
+## Onboarding, verification and the feed
+- **Sign-in:** Google, phone (SMS) and email. In Firebase > Authentication > Sign-in method switch on Google, Phone and Email/Password, and add your domain under Settings > Authorized domains. Phone sign-in needs the Blaze plan for real SMS.
+- **Onboarding is required** (`/onboarding`): contact, a recent X/Instagram/TikTok/LinkedIn post (age read from the post id), ID photo, live selfie (blink and head turns), bank statement PDF and the member agreement (`lib/agreement.js`). Approval is automatic: `/api/onboarding/submit` re-checks the post date, statement and signature. Face scores come from the phone, so the images are kept as evidence and can be viewed in the Firebase console under `verifications/{uid}`. Rules block unverified users from creating or joining groups.
+- **Explore feed:** admins switch on "Show in Explore"; members request to join; admins approve or decline after seeing a server-computed record (`/api/requests/*`).
+- **QR codes:** each group has a QR for its invite link (`components/QrSheet.js`); `/scan` reads them with the camera.
+- **Receipts:** Transactions (Activities tab) opens a shareable receipt image (`lib/receipt.js`).
+- Face models and the PDF worker are copied into `public/` by `scripts/copy-assets.js` on `npm install`. Republish `firestore.rules` after updating.

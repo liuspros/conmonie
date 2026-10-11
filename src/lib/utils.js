@@ -1,4 +1,6 @@
 const DAY = 864e5;
+// What the public feed shows about a group (no account details).
+export const publicDoc = (id, g, adminName) => ({ gid: id, adminId: g.adminId, adminName, name: g.name, description: g.description || '', amount: g.amount, packingFee: g.packingFee || 0, frequencyDays: g.frequencyDays, avatar: g.avatar || 0, memberCount: g.members.length, createdAt: g.createdAt || Date.now() });
 export const naira = (n) => '\u20A6' + Number(n || 0).toLocaleString('en-NG');
 export const haptic = () => { try { navigator.vibrate && navigator.vibrate(12); } catch {} };
 // Nigeria is UTC+1 all year, so days are counted in WAT on the browser and the server alike.

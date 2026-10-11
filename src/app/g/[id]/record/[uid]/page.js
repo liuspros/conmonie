@@ -31,7 +31,7 @@ export default function Record() {
       <Link href={'/g/' + id + '/info'} style={{ color: 'inherit', textDecoration: 'none' }}>&lsaquo; Back</Link>
       <h1 style={{ fontSize: 24, fontWeight: 700 }}>Member record</h1>
       <div className="glass" style={{ fontSize: 14, lineHeight: 1.8 }}>
-        <b>{d.u.verified && d.u.legalName ? d.u.legalName : d.m.name}</b> {d.u.verified && <span className="tag k">Verified</span>}<br />
+        <b>{d.m.name}</b> {d.u.verified && <span className="tag k">Verified</span>}<br />
         Group: {d.g.name}<br />Agreed to the group terms: {d.m.termsAt ? when(d.m.termsAt) + ' (version ' + (d.m.termsVersion || 1) + ')' : 'not recorded'}<br />Generated: {when(Date.now())}
       </div>
       <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

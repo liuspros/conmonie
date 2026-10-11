@@ -12,7 +12,7 @@ export default function Pay() {
   const [info, setInfo] = useState(), [loadErr, setLoadErr] = useState(''), [count, setCount] = useState(1), [rec, setRec] = useState([]), [copied, setCopied] = useState(false), [busy, setBusy] = useState(false), [done, setDone] = useState(false), [err, setErr] = useState('');
   useEffect(() => {
     if (!user) return;
-    api('/api/pay/info?gid=' + id).then((j) => (j.status === 'late_fee_required' ? r.replace('/g/' + id + '/late') : setInfo(j))).catch(() => setLoadErr('Could not load. Check your connection and try again.'));
+    api('/api/pay/info?gid=' + id).then(setInfo).catch(() => setLoadErr('Could not load. Check your connection and try again.'));
   }, [user, id]);
   if (loadErr) return <main className="app"><p role="alert" style={{ fontWeight: 600 }}>{loadErr}</p></main>;
   if (!info) return <main className="app"><Skeleton n={3} h={110} /></main>;
@@ -37,7 +37,6 @@ export default function Pay() {
     setBusy(true); setErr('');
     try { await api('/api/contribute', { gid: id, count, receipts: rec.map((q) => ({ img: q.img, hash: q.hash, x: q.x, sig: q.sig })) }); haptic(); setDone(true); }
     catch (e) {
-      if (e.data?.error === 'late_fee_required') return r.replace('/g/' + id + '/late');
       setErr(e.data?.error === 'short' ? 'Your receipts total ' + naira(e.data.total) + ', which is short of ' + naira(e.data.required) + '. Upload another receipt for the balance.' : 'Could not send. Check your connection and try again.');
     }
     setBusy(false);
@@ -64,7 +63,7 @@ export default function Pay() {
         <div className="r"><span style={{ fontSize: 28, fontWeight: 700, letterSpacing: 1 }}>{info.acct?.number || 'Not set'}</span>
           <button onClick={copy} aria-label="Copy account number" style={{ minWidth: 44, height: 44, borderRadius: 14, padding: '0 10px', background: 'rgba(255,255,255,.14)', color: '#fff', fontSize: 13 }}>{copied ? 'Copied' : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></svg>}</button></div>
         <div>{info.acct?.name}</div></div>
-      {info.late ? <p className="m" style={{ textAlign: 'center' }}>Platform late fee paid.</p> : <p className="m" style={{ textAlign: 'center' }}>Pay before {info.dueTime}. After that a late fee applies before you can pay.</p>}
+      <p className="m" style={{ textAlign: 'center' }}>Pay before {info.dueTime}.{info.lateFee ? ' After that your admin adds a late fee of ' + naira(info.lateFee) + '.' : ''}</p>
       <label className="btn2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>Upload receipt<input type="file" accept="image/*" multiple onChange={onFile} style={{ display: 'none' }} /></label>
       {rec.map((q) => (
         <div key={q.hash} className="glass" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>

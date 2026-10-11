@@ -1,10 +1,10 @@
 import { adb, push, adminReady } from '@/lib/admin';
-import { authUser, loadGroup, sha, sigOf, safeId, lateDocPath, json } from '@/lib/server';
+import { authUser, loadGroup, sha, sigOf, safeId, json } from '@/lib/server';
 import { cycleInfo } from '@/lib/utils';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-// Every contribution is created here, never from the browser, so lateness, amounts and the late-fee rule cannot be bypassed.
+// Every contribution is created here, never from the browser, so lateness and amounts cannot be tampered with.
 export async function POST(req) {
   if (!adminReady()) return json({ error: 'not_configured' }, 501);
   const u = await authUser(req); if (!u) return json({ error: 'unauthorized' }, 401);
@@ -13,9 +13,9 @@ export async function POST(req) {
   const n = Math.floor(+count);
   if (!(n >= 1 && n <= 20) || !Array.isArray(receipts) || receipts.length < 1 || receipts.length > 4) return json({ error: 'bad_request' }, 400);
   const db = adb(), ci = cycleInfo(g);
-  if (ci.late && !(await db.doc(lateDocPath(gid, u.uid, ci.k)).get()).exists) return json({ error: 'late_fee_required' }, 402);
 
   const me = (await db.doc('users/' + u.uid).get()).data() || {}, names = String(me.name || '').toLowerCase().split(/\s+/);
+  if (me.verified !== true) return json({ error: 'not_verified' }, 403);
   const required = (g.amount + (g.packingFee || 0) + (ci.late ? g.lateFee || 0 : 0)) * n;
   const rows = []; let total = 0, unread = false;
   for (const q of receipts) {
@@ -38,6 +38,7 @@ export async function POST(req) {
 
   const b = db.batch(), cref = db.collection(`groups/${gid}/contributions`).doc(), at = Date.now();
   b.set(cref, { uid: u.uid, name: me.name || 'Member', cycle: ci.k, count: n, required, late: ci.late, status: 'pending', createdAt: at });
+  b.set(db.collection(`groups/${gid}/messages`).doc(), { type: 'system', kind: 'submitted', text: (me.name || 'A member') + ' submitted payment', amount: required, uid: u.uid, at });
   for (const q of rows) {
     b.set(db.collection(`groups/${gid}/receipts`).doc(), { uid: u.uid, cid: cref.id, image: q.img, hash: q.hash, extracted: q.x, flags: q.flags, createdAt: at });
     b.set(db.doc(`groups/${gid}/refs/${q.hash}`), { uid: u.uid });

@@ -1,14 +1,14 @@
 'use client';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { IconBadge } from '@/components/Icon';
 
 export default function VerifyCard() {
-  const { profile } = useAuth(), s = profile?.verifyStatus;
+  const { profile } = useAuth(), ok = profile?.verified;
   return (
-    <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="r"><b>Identity check</b>{s === 'verified' && <span className="tag k">Verified</span>}{s === 'pending' && <span className="tag">Under review</span>}</div>
-      <span className="m">{s === 'verified' ? 'Your identity is verified. Groups can see the Verified badge next to your name.' : s === 'pending' ? 'Our team is reviewing your documents. You will get a notification.' : s === 'rejected' ? 'Your last check was not approved. You can try again.' : 'Get a Verified badge: it helps admins trust you and is needed for some groups. It takes about 3 minutes.'}</span>
-      {s !== 'verified' && s !== 'pending' && <Link href="/verify" className="btn" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, textDecoration: 'none' }}>{s === 'rejected' ? 'Try again' : 'Get verified'}</Link>}
+    <div className="glass" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <IconBadge n="shield" tone={ok ? 'g' : ''} />
+      <div style={{ flex: 1 }}><b>Identity check</b><div className="m" style={{ fontSize: 13 }}>{ok ? 'You are verified. Your Verified badge shows in groups.' : 'Complete your identity check to use Conmonie.'}</div></div>
+      {ok && <span className="st st-ok">Verified</span>}
     </div>
   );
 }
