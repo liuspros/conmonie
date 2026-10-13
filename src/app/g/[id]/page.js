@@ -167,8 +167,8 @@ export default function Group() {
       </div>
 
       {locked
-        ? <div className="m" style={{ position: 'sticky', bottom: 92, textAlign: 'center', padding: '10px 20px', marginTop: 'auto' }}>Only admins can send messages in this group.</div>
-        : <form data-tour="g-input" onSubmit={send} style={{ position: 'sticky', bottom: 92, display: 'flex', gap: 8, padding: '12px 20px 0', marginTop: 'auto', alignItems: 'center' }}>
+        ? <div className="m" style={{ position: 'sticky', bottom: 'calc(env(safe-area-inset-bottom) + 86px)', textAlign: 'center', padding: '10px 20px', marginTop: 'auto' }}>Only admins can send messages in this group.</div>
+        : <form data-tour="g-input" onSubmit={send} style={{ position: 'sticky', bottom: 'calc(env(safe-area-inset-bottom) + 86px)', display: 'flex', gap: 8, padding: '12px 20px 0', marginTop: 'auto', alignItems: 'center' }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #E6E8EB', borderRadius: 26, height: 50, padding: '0 6px 0 14px', gap: 8 }}>
               <label aria-label="Send a picture" style={{ cursor: 'pointer', display: 'flex', color: '#3A3D41' }}><Icon n="image" s={22} /><input type="file" accept="image/*" onChange={sendImage} style={{ display: 'none' }} /></label>
               <input style={{ flex: 1, border: 0, outline: 0, fontSize: 15, background: 'transparent', minWidth: 0 }} placeholder="Type a message..." value={text} onChange={(e) => setText(e.target.value)} aria-label="Message" />

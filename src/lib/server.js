@@ -41,3 +41,10 @@ export async function statsFor(uid) {
   }
   return { groups: gs.length, bestStreak: best, confirmed, late };
 }
+
+export async function loadGoal(gid, uid) {
+  if (!gid) return null;
+  const g = (await adb().doc('goals/' + gid).get()).data();
+  return g && g.members.includes(uid) ? g : null;
+}
+export async function goalAcct(gid) { const p = await adb().doc(`goals/${gid}/private/acct`).get(); return p.exists ? p.data() : null; }

@@ -40,7 +40,7 @@ export default function Me() {
       </div>
       <form onSubmit={save} className="dark" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}><span className="ibadge" style={{ background: 'rgba(255,255,255,.1)', color: '#fff' }}><Icon n="bank" /></span><div><b style={{ fontSize: 18 }}>Payout account</b><div style={{ fontSize: 13, color: '#B8BCC2' }}>Shown to the group when it is your turn to be paid.</div></div></div>
-        <Field icon="bank"><BankSelect dark value={p.bank} onChange={(v) => setP({ ...p, bank: v })} required /></Field>
+        <BankSelect dark value={p.bank} onChange={(v) => setP({ ...p, bank: v })} required />
         <Field icon="card"><input className="inp" style={dk} placeholder="Account number" inputMode="numeric" maxLength={10} value={p.number} onChange={(e) => setP({ ...p, number: e.target.value })} required /></Field>
         <Field icon="user"><input className="inp" style={dk} placeholder="Account name" value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} required /></Field>
         <button className="btn">{saved ? 'Saved' : 'Save account'}</button>

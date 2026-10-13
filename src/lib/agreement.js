@@ -10,7 +10,7 @@ export const AGREEMENT = [
     'Because we do not hold the money, the thing that keeps an Ajo safe is knowing who everyone really is. That is why we ask for the things below.' ] },
   { t: '2. What we collect from you', p: [
     'Your sign-in details (Google account, phone number or email), your full legal name, and your WhatsApp number.',
-    'A link to your social media profile and to one post you made in the last 30 days, so we can see you are a real, active person.',
+    'A phone number that we verify by sending you a code, your WhatsApp number, and the name and phone number of one trusted contact (for example a parent, sibling or friend) who knows you.',
     'A photo of your government ID, a live selfie that we compare with your ID photo, and the first page of a recent bank statement, which shows your name and your home address.',
     'Technical details of the moment you sign this agreement: the date, the time, your device type and your internet address.',
     'Your activity in Conmonie: the groups you join, your contributions, your streak and your messages in groups.' ] },
@@ -20,7 +20,7 @@ export const AGREEMENT = [
     'To keep a record we can rely on if there is a dispute, and to help the group admin and the authorities act if someone commits fraud.',
     'We do not sell your data and we do not use your ID, selfie or statement for advertising.' ] },
   { t: '4. Who can see your information', p: [
-    'Other members and group admins can see your display name, your Verified badge, your payment status and your streak. They cannot see your ID, selfie, statement, address or WhatsApp number.',
+    'Other members and group admins can see your display name, your Verified badge, your payment status and your streak. They cannot see your ID, selfie, statement, address, phone numbers or trusted contact.',
     'Only Conmonie can see the documents you submit, and only a very small number of people at Conmonie can open them.',
     'The exception is clause 6: if you break your promises on purpose, we may share your details with the group admin and with the authorities, as explained there.',
     'We may also share information if the law or a court requires it.' ] },
@@ -31,8 +31,8 @@ export const AGREEMENT = [
     'You will not take your payout and then stop paying the groups you joined. If you cannot pay, you will tell the group admin early, so a plan can be made.' ] },
   { t: '6. If you stop paying: what can happen', p: [
     'Step one is gentle. We send you reminders, the group admin may contact you, and your streak and record in Conmonie will show the missed payments. The admin may remove you from the group and decide whether to allow you into other groups.',
-    'If you have already collected a payout and then refuse to pay what you owe, or avoid the group admin, you agree that Conmonie may give the group admin your full legal name, your WhatsApp number, your social media links and your payment record, so they can contact you and make a claim.',
-    'If you did this on purpose, or used false documents, fake receipts or someone else\'s identity, you agree that Conmonie and the group admin may report you to the police or another lawful authority. You agree that we may give them the information you submitted to us, including your ID photo, selfie, the name and address on your statement, your WhatsApp number and your social media links, and the records of your contributions and receipts.',
+    'If you have already collected a payout and then refuse to pay what you owe, or avoid the group admin, you agree that Conmonie may give the group admin your full legal name, your phone and WhatsApp numbers, your trusted contact\'s details and your payment record, so they can contact you and make a claim. If you stop responding, we or the admin may also contact your trusted contact, only to reach you.',
+    'If you did this on purpose, or used false documents, fake receipts or someone else\'s identity, you agree that Conmonie and the group admin may report you to the police or another lawful authority. You agree that we may give them the information you submitted to us, including your ID photo, selfie, the name and address on your statement, your phone and WhatsApp numbers, your trusted contact\'s details, and the records of your contributions and receipts.',
     'Please understand this honestly. Paying late, or being unable to pay, is usually a civil matter between you and the group, and the police or a court decides what happens next. Conmonie cannot promise that anyone will be arrested or that money will be recovered. But deliberately collecting other people\'s money with no intention of paying it back, or using false identities and documents, can be a crime. This clause exists so that those cases can be reported quickly with real evidence.' ] },
   { t: '7. Fake documents and impersonation', p: [
     'If you submit a document that is not yours, that has been edited, or that does not match your face, we may block your account, keep the evidence, tell the groups you belong to, and report it to the authorities.',

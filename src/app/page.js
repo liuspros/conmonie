@@ -5,23 +5,23 @@ import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot, getDoc, getDocs, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
-import { cycleInfo, naira } from '@/lib/utils';
-import Av, { GroupAv } from '@/components/Av';
+import Av from '@/components/Av';
 import TabBar from '@/components/TabBar';
-import Skeleton from '@/components/Skeleton';
 import Icon from '@/components/Icon';
+import GoalRing from '@/components/GoalRing';
 import Tour from '@/components/Tour';
 import InstallBanner from '@/components/InstallBanner';
 import { isStandalone } from '@/context/InstallContext';
 
 const HSTEPS = [
-  { title: 'Welcome to Conmonie', body: 'Run your Ajo with confidence. This quick tour shows you around. You can skip it anytime.' },
+  { title: 'Welcome to Conmonie', body: 'Save together with people you can trust. This quick tour shows you around. You can skip it anytime.' },
   { target: 'bell', title: 'Notifications', body: 'Reminders and confirmations arrive here. A dot shows when there is something new.' },
-  { target: 'streak', title: 'Your contributions', body: 'The total of all your confirmed payments, and your on-time streak. Tap View Transactions for receipts you can share.' },
-  { target: 'create', title: 'Create an Ajo', body: 'Start your own group, set the amount and payment day, then invite members with a link or a QR code.' },
+  { target: 'streak', title: 'Your contributions', body: 'The total of all your confirmed payments across Ajos and ConGoals, and your on-time streak. Tap View Transactions for receipts you can share.' },
+  { target: 'create', title: 'Create', body: 'Start an Ajo or a ConGoal, then invite people with a link or a QR code.' },
   { target: 'join', title: 'Join with a link', body: 'Got an invite link? Paste it here.' },
-  { target: 'scan', title: 'Scan a QR code', body: 'Scan a group QR code from the admin to join in seconds.' },
-  { target: 'ajos', title: 'Your Ajos', body: 'Every group you are in is listed below. Tap one to open its chat, checklist and payments.' },
+  { target: 'scan', title: 'Scan a QR code', body: 'Scan a QR code from an Ajo admin or a ConGoal organizer to join in seconds.' },
+  { target: 'ajos-card', title: 'Ajos', body: 'Rotating group contributions: everyone pays in each round and takes a turn to collect.' },
+  { target: 'congoal-card', title: 'ConGoal', body: 'Save toward one shared target with a deadline, such as equipment for a class, a trip or a project. Everyone sees the progress.' },
   { target: 'tab-explore', noScroll: true, title: 'Explore', body: 'Find public Ajos and request to join. The admin decides after checking your record.' },
   { target: 'tab-activities', noScroll: true, title: 'Activities', body: 'Every payment you have made, with a receipt you can share or download.' },
   { target: 'tab-me', noScroll: true, title: 'Me', body: 'Your photo, payout account, lock, how it works, and this guide again.' },
@@ -29,24 +29,26 @@ const HSTEPS = [
 
 export default function Home() {
   const { user, profile } = useRequireAuth(), r = useRouter();
-  const [hi, setHi] = useState('Hello'), [unread, setUnread] = useState(0), [groups, setGroups] = useState(null), [streak, setStreak] = useState(0), [total, setTotal] = useState(0), [paid, setPaid] = useState({});
-  const [hide, setHide] = useState(false), [link, setLink] = useState(''), [open, setOpen] = useState(false), [tourDone, setTourDone] = useState(false), [showInstall, setShowInstall] = useState(false);
+  const [hi, setHi] = useState('Hello'), [unread, setUnread] = useState(0), [ajos, setAjos] = useState(null), [goals, setGoals] = useState(null), [streak, setStreak] = useState(0), [ajoTotal, setAjoTotal] = useState(0), [goalTotal, setGoalTotal] = useState(0);
+  const [hide, setHide] = useState(false), [tip, setTip] = useState(false), [link, setLink] = useState(''), [open, setOpen] = useState(false), [sheet, setSheet] = useState(false), [tourDone, setTourDone] = useState(false), [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     return onSnapshot(query(collection(db, 'groups'), where('members', 'array-contains', user.uid)), async (s) => {
-      const gs = s.docs.map((d) => ({ id: d.id, ...d.data() })); setGroups(gs);
+      const gs = s.docs.map((d) => ({ id: d.id, ...d.data() })); setAjos(gs.length);
       const ex = await Promise.all(gs.map(async (g) => {
-        const ci = cycleInfo(g);
-        const [m, mine, round] = await Promise.all([
-          getDoc(doc(db, 'groups', g.id, 'members', user.uid)).catch(() => null),
-          getDocs(query(collection(db, 'groups', g.id, 'contributions'), where('uid', '==', user.uid))).catch(() => null),
-          getDocs(query(collection(db, 'groups', g.id, 'contributions'), where('cycle', '==', ci.k))).catch(() => null)]);
-        return { id: g.id, streak: m && m.exists() ? m.data().streak || 0 : 0,
-          total: mine ? mine.docs.reduce((t, d) => (d.data().status === 'confirmed' ? t + (d.data().required || 0) : t), 0) : 0,
-          paid: round ? new Set(round.docs.filter((d) => d.data().status === 'confirmed').map((d) => d.data().uid)).size : 0 };
+        const [m, mine] = await Promise.all([getDoc(doc(db, 'groups', g.id, 'members', user.uid)).catch(() => null), getDocs(query(collection(db, 'groups', g.id, 'contributions'), where('uid', '==', user.uid))).catch(() => null)]);
+        return { streak: m && m.exists() ? m.data().streak || 0 : 0, total: mine ? mine.docs.reduce((t, d) => (d.data().status === 'confirmed' ? t + (d.data().required || 0) : t), 0) : 0 };
       }));
-      setStreak(Math.max(0, ...ex.map((e) => e.streak))); setTotal(ex.reduce((t, e) => t + e.total, 0)); setPaid(Object.fromEntries(ex.map((e) => [e.id, e.paid])));
+      setStreak(Math.max(0, ...ex.map((e) => e.streak))); setAjoTotal(ex.reduce((t, e) => t + e.total, 0));
+    });
+  }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(query(collection(db, 'goals'), where('members', 'array-contains', user.uid)), async (s) => {
+      const gs = s.docs.map((d) => ({ id: d.id, ...d.data() })); setGoals(gs);
+      const mine = await Promise.all(gs.map((g) => getDocs(query(collection(db, 'goals', g.id, 'contributions'), where('uid', '==', user.uid))).catch(() => null)));
+      setGoalTotal(mine.reduce((t, q) => t + (q ? q.docs.reduce((a, d) => (d.data().status === 'confirmed' ? a + (d.data().amount || 0) : a), 0) : 0), 0));
     });
   }, [user]);
   useEffect(() => { if (user) return onSnapshot(query(collection(db, 'users', user.uid, 'notifications'), where('read', '==', false)), (s) => setUnread(s.size), () => {}); }, [user]);
@@ -58,6 +60,7 @@ export default function Home() {
   useEffect(() => { const h = new Date().getHours(); setHi(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'); }, []);
   const toggle = () => { const n = !hide; setHide(n); try { localStorage.setItem('conmonie-hide', n ? '1' : '0'); } catch {} };
   const goJoin = () => { const c = link.trim().split('/').filter(Boolean).pop(); if (c) r.push('/join/' + c); };
+  const total = ajoTotal + goalTotal, tgt = (goals || []).reduce((t, g) => t + (g.target || 0), 0), col = (goals || []).reduce((t, g) => t + (g.collected || 0), 0), pct = tgt ? Math.round((col / tgt) * 100) : 0;
 
   return (
     <main className="app">
@@ -71,36 +74,48 @@ export default function Home() {
       </div>
       {showInstall && <InstallBanner onClose={() => setShowInstall(false)} />}
       <div className="dark" data-tour="streak" style={{ padding: 20 }}>
-        <div className="r"><div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 16 }}>Total Contributions <Icon n="info" s={16} c="#B8BCC2" /></div>
+        <div className="r"><div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 16 }}>Total Contributions <button type="button" aria-label="What is this?" aria-expanded={tip} onClick={() => setTip(!tip)} style={{ background: 'none', color: '#B8BCC2', display: 'flex', padding: 4 }}><Icon n="info" s={16} /></button></div>
           <button className="pill" style={{ background: 'rgba(255,255,255,.12)', color: '#fff', gap: 6 }} onClick={toggle} aria-pressed={hide}><Icon n={hide ? 'eye' : 'eyeOff'} s={16} />{hide ? 'Show' : 'Hide'}</button></div>
+        {tip && <p role="note" style={{ fontSize: 13, color: '#D3D6DA', lineHeight: 1.5, marginTop: 10 }}>The total of all your payments that admins and organizers have confirmed, in Ajos and ConGoals, including any packing or late fees. Payments still waiting for confirmation are not counted.</p>}
         <div style={{ fontSize: 42, fontWeight: 700, letterSpacing: -1, margin: '12px 0 2px' }}>{hide ? '\u20A6 \u2022\u2022\u2022\u2022\u2022\u2022' : '\u20A6' + total.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</div>
-        <div style={{ color: '#B8BCC2', fontSize: 14 }}>Across all your Ajos</div>
+        <div style={{ color: '#B8BCC2', fontSize: 14 }}>Across your Ajos and ConGoals</div>
         <div style={{ height: 1, background: 'rgba(255,255,255,.14)', margin: '14px 0' }} />
         <div className="r"><Link href="/activities" style={{ display: 'flex', gap: 12, alignItems: 'center', color: '#fff', textDecoration: 'none', fontSize: 16 }}><span className="ibadge" style={{ background: 'rgba(255,255,255,.1)', color: '#fff', width: 40, height: 40 }}><Icon n="doc" s={18} /></span>View Transactions</Link>
-          <span className="st" style={{ background: 'rgba(200,241,53,.16)', color: '#C8F135' }}><Icon n="flame" s={14} />{streak} streak</span></div>
+          <span className="st nd" style={{ background: 'rgba(200,241,53,.16)', color: '#C8F135' }}><Icon n="flame" s={14} />{streak} streak</span></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-        <Link data-tour="create" href="/new" className="glass act"><Icon n="plus" />Create</Link>
+        <button data-tour="create" className="glass act" onClick={() => setSheet(true)}><Icon n="plus" />Create</button>
         <button data-tour="join" className="glass act" onClick={() => setOpen(!open)}><Icon n="link" />Join</button>
         <Link data-tour="scan" href="/scan" className="glass act"><Icon n="scan" />Scan</Link>
       </div>
       {open && <div style={{ display: 'flex', gap: 8 }}><input className="inp" placeholder="Paste invite link or code" value={link} onChange={(e) => setLink(e.target.value)} /><button className="btn" style={{ width: 90 }} onClick={goJoin}>Go</button></div>}
-      <div className="r" data-tour="ajos"><h2 style={{ fontSize: 20, fontWeight: 600 }}>Your Ajos</h2><span className="m" style={{ fontSize: 15 }}>{groups ? groups.length + ' active' : ''}</span></div>
-      {!groups && <Skeleton />}
-      {groups && groups.length === 0 && <div className="glass"><b>No Ajo yet</b><p className="m" style={{ marginTop: 4 }}>Create one for your people, scan a QR code, or find a public group in Explore.</p></div>}
-      {groups && groups.map((g) => { const c = cycleInfo(g), n = paid[g.id] || 0, pct = Math.round((n / Math.max(1, g.members.length)) * 100); return (
-        <Link key={g.id} href={'/g/' + g.id} className="glass" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
-          <div className="r"><div style={{ display: 'flex', gap: 14, alignItems: 'center' }}><GroupAv g={g} size={54} /><div><b style={{ fontSize: 18 }}>{g.name}</b><div className="m" style={{ fontSize: 15 }}>{naira(g.amount)} every {g.frequencyDays} day{g.frequencyDays > 1 ? 's' : ''}</div></div></div>
-            <span className={'tag' + (c.isPackingDay ? ' k' : '')} style={{ fontSize: 14, padding: '8px 14px' }}>{c.isPackingDay ? 'Due today' : 'In ' + c.daysToNext + 'd'}</span></div>
-          <div style={{ height: 1, background: '#E6E8EB', margin: '14px 0' }} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr auto', gap: 14, alignItems: 'center' }}>
-            <div><div className="m" style={{ fontSize: 13 }}>Next contribution</div><b style={{ fontSize: 20 }}>{naira(g.amount + (g.packingFee || 0))}</b></div>
-            <div><div className="m" style={{ fontSize: 13 }}>Round progress</div><div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><span style={{ width: pct + '%' }} /></div><div className="m" style={{ fontSize: 13 }}>{n} of {g.members.length} paid</div></div>
-            <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 14, fontWeight: 600 }}>Details<Icon n="forward" s={16} /></span>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Link data-tour="ajos-card" href="/ajos" className="fcard" style={{ background: 'rgba(255,255,255,.9)' }}>
+          <span className="ibadge g" style={{ width: 52, height: 52 }}><svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="21" r="12" fill="none" stroke="#0A0A0A" strokeWidth="3.6" /><circle cx="20" cy="9" r="4.2" fill="#C8F135" stroke="#0A0A0A" strokeWidth="1.8" /></svg></span>
+          <div><b style={{ fontSize: 22 }}>Ajos</b><div className="m" style={{ fontSize: 13, lineHeight: 1.4, marginTop: 2 }}>Rotating group contributions</div></div>
+          <div className="r"><span className="tag">{ajos == null ? '...' : ajos + ' active'}</span><Icon n="forward" s={18} /></div>
+        </Link>
+        <Link data-tour="congoal-card" href="/goals" className="fcard" style={{ background: 'linear-gradient(160deg, #E6F3FF, #BCDDFF)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <GoalRing pct={pct} size={52} stroke={7}><Icon n="flag" s={18} c="#1B5FB8" /></GoalRing>
+            {goals && goals.length > 0 && <span className="m" style={{ fontSize: 12, fontWeight: 600, color: '#1B5FB8' }}>{pct}%</span>}
           </div>
-        </Link>); })}
+          <div><b style={{ fontSize: 22, color: '#0F3A6B' }}>ConGoal</b><div style={{ fontSize: 13, lineHeight: 1.4, marginTop: 2, color: '#35577F' }}>Shared savings goals for any group</div></div>
+          <div className="r"><span className="tag" style={{ background: 'rgba(255,255,255,.7)', color: '#0F3A6B' }}>{goals == null ? '...' : goals.length + ' active'}</span><Icon n="forward" s={18} c="#0F3A6B" /></div>
+        </Link>
+      </div>
+
+      {sheet && (
+        <div role="dialog" aria-modal="true" aria-label="What do you want to create?" onClick={() => setSheet(false)} style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'rgba(10,10,12,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(430px, 100%)', background: '#fff', borderRadius: '28px 28px 0 0', padding: '22px 22px calc(env(safe-area-inset-bottom) + 22px)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="r"><b style={{ fontSize: 20 }}>What do you want to create?</b><button aria-label="Close" onClick={() => setSheet(false)} style={{ background: 'none' }}><Icon n="x" /></button></div>
+            <Link href="/new" className="glass" style={{ display: 'flex', gap: 14, alignItems: 'center', textDecoration: 'none', color: 'inherit' }}><span className="ibadge g"><Icon n="swap" /></span><div style={{ flex: 1 }}><b>An Ajo</b><div className="m" style={{ fontSize: 13 }}>Everyone pays in every round and takes a turn to collect.</div></div><Icon n="right" s={18} /></Link>
+            <Link href="/goals/new" className="glass" style={{ display: 'flex', gap: 14, alignItems: 'center', textDecoration: 'none', color: 'inherit' }}><span className="ibadge" style={{ background: '#DCEEFF', color: '#1B5FB8' }}><Icon n="flag" /></span><div style={{ flex: 1 }}><b>A ConGoal</b><div className="m" style={{ fontSize: 13 }}>Save toward one shared target before a deadline.</div></div><Icon n="right" s={18} /></Link>
+          </div>
+        </div>)}
       <TabBar />
-      <Tour id="home" steps={HSTEPS} enabled={groups !== null} onDone={() => setTourDone(true)} />
+      <Tour id="home" steps={HSTEPS} enabled={ajos !== null && goals !== null} onDone={() => setTourDone(true)} />
     </main>
   );
 }

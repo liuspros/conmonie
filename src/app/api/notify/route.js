@@ -11,12 +11,12 @@ export async function POST(req) {
   const uid = v.ok ? (await v.json()).users?.[0]?.localId : null;
   if (!uid) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  const { event, gid, target } = await req.json();
-  const g = (await adb().doc('groups/' + gid).get()).data();
+  const { event, gid, target, kind } = await req.json(), goal = kind === 'goal';
+  const g = (await adb().doc((goal ? 'goals/' : 'groups/') + gid).get()).data();
   if (!g || !g.members.includes(uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-  const link = '/g/' + gid, title = g.name, admin = uid === g.adminId;
+  const adminId = g.adminId || g.organizerId, link = (goal ? '/goal/' : '/g/') + gid, title = g.name, admin = uid === adminId;
   let to = [], body = '';
-  if (event === 'submitted') { const n = ((await adb().doc('users/' + uid).get()).data() || {}).name || 'A member'; to = [g.adminId]; body = n + ' sent a receipt for you to confirm.'; }
+  if (event === 'submitted') { const n = ((await adb().doc('users/' + uid).get()).data() || {}).name || 'A member'; to = [adminId]; body = n + ' sent a receipt for you to confirm.'; }
   else if (admin && g.members.includes(target) && event === 'confirmed') { to = [target]; body = 'Your contribution was confirmed by the admin.'; }
   else if (admin && g.members.includes(target) && event === 'rejected') { to = [target]; body = 'Your receipt was not accepted. Open the group to see why.'; }
   else if (admin && g.members.includes(target) && event === 'packed') { to = [target]; body = 'The admin has paid you for this round. Check your account.'; }
