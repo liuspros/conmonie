@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signOut, RecaptchaVerifier, linkWithPhoneNumber } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -29,7 +29,7 @@ const Check = ({ ok, children, fix, onFix }) => (
 
 export default function Onboarding() {
   const { user, profile } = useRequireAuth(), r = useRouter();
-  const [ready, setReady] = useState(false), [step, setStep] = useState(0), [name, setName] = useState(''), [phone, setPhone] = useState(''), [code, setCode] = useState(''), [conf, setConf] = useState(null), [vPhone, setVPhone] = useState('');
+  const [ready, setReady] = useState(false), [step, setStep] = useState(0), [name, setName] = useState(''), [phone, setPhone] = useState('');
   const [waSame, setWaSame] = useState(true), [wa, setWa] = useState(''), [tcName, setTcName] = useState(''), [tcPhone, setTcPhone] = useState(''), [tcRel, setTcRel] = useState('Parent');
   const [id, setId] = useState(null), [live, setLive] = useState(null), [stmt, setStmt] = useState(null), [addr, setAddr] = useState('');
   const [read, setRead] = useState(false), [agree, setAgree] = useState(false), [signed, setSigned] = useState('');
@@ -39,37 +39,23 @@ export default function Onboarding() {
     try { const d = JSON.parse(sessionStorage.getItem(KEY) || 'null'); if (d) { setStep(d.step || 0); setName(d.name || ''); setPhone(d.phone || ''); setWaSame(d.waSame !== false); setWa(d.wa || ''); setTcName(d.tcName || ''); setTcPhone(d.tcPhone || ''); setTcRel(d.tcRel || 'Parent'); setId(d.id || null); setLive(d.live || null); setStmt(d.stmt || null); setAddr(d.addr || ''); } } catch {}
     setReady(true);
   }, []);
-  useEffect(() => { if (user && user.phoneNumber) setVPhone(user.phoneNumber); }, [user]);
   useEffect(() => { if (ready && !done) try { sessionStorage.setItem(KEY, JSON.stringify({ step, name, phone, waSame, wa, tcName, tcPhone, tcRel, id: id && !id.scanning ? id : null, live, stmt, addr })); } catch {} }, [ready, done, step, name, phone, waSame, wa, tcName, tcPhone, tcRel, id, live, stmt, addr]);
   useEffect(() => { if (profile?.verified && !done) r.replace('/'); }, [profile]);
   useEffect(() => { if (step >= 1) loadFace().catch(() => {}); }, [step]); // warm up the face tools
 
   const ps = useMemo(() => (stmt && stmt.rows ? parseStatement(stmt.rows, { expectedName: name }) : null), [stmt, name]);
   useEffect(() => { if (ps && ps.addressGuess && !addr) setAddr(ps.address); }, [ps && ps.address]);
-  const waNum = waSame ? vPhone : normalizePhone(wa) || '', tcP = normalizePhone(tcPhone);
+  const myPhone = normalizePhone(phone) || '', waNum = waSame ? myPhone : normalizePhone(wa) || '', tcP = normalizePhone(tcPhone);
   const stmtAddr = ps && ps.address && !ps.addressGuess ? ps.address : '', address = (addr.trim() || stmtAddr).trim(), addrSource = stmtAddr && (!addr.trim() || addr.trim() === stmtAddr) ? 'statement' : 'typed';
   const distance = id?.descriptor && live?.descriptor ? dist(id.descriptor, live.descriptor) : null;
   const C = {
-    phone: !!vPhone, wa: !!normalizePhone(waNum), contact: tcName.trim().length >= 3 && !!tcP && tcP !== vPhone,
+    phone: !!myPhone, wa: !!normalizePhone(waNum), contact: tcName.trim().length >= 3 && !!tcP && tcP !== myPhone,
     face: distance != null && distance <= FACE_MAX, live: !!live?.liveness,
     pdf: !!stmt?.isPdf, name: !!ps?.nameFound, address: address.length >= 8 && (addrSource === 'statement' || ALLOW_TYPED_ADDRESS),
     recent: ps?.ageDays != null && ps.ageDays <= STATEMENT_MAX_DAYS && ps.ageDays >= -1, clean: !EDITORS.test((stmt?.producer || '') + ' ' + (stmt?.creator || '')),
   };
   const allOk = Object.values(C).every(Boolean);
 
-  async function sendCode() {
-    setErr(''); const n = normalizePhone(phone); if (!n) return setErr('Enter a valid phone number, for example 0801 234 5678.');
-    setBusy('Sending your code...');
-    try { window.__rc2 = window.__rc2 || new RecaptchaVerifier(auth, 'rc2', { size: 'invisible' }); setConf(await linkWithPhoneNumber(auth.currentUser, n, window.__rc2)); }
-    catch (e) { try { window.__rc2 && window.__rc2.clear(); } catch {} window.__rc2 = null; setErr(MSG[e.code] || 'Could not send the code. Check the number and your network.'); }
-    setBusy('');
-  }
-  async function confirmCode() {
-    setErr(''); setBusy('Checking the code...');
-    try { await conf.confirm(code.trim()); await auth.currentUser.reload(); setVPhone(auth.currentUser.phoneNumber || ''); setConf(null); setCode(''); }
-    catch (e) { setErr(MSG[e.code] || 'Could not confirm that code.'); }
-    setBusy('');
-  }
   async function onId(e) {
     const file = e.target.files[0]; e.target.value = ''; if (!file) return;
     setErr(''); setId(null);
@@ -90,7 +76,7 @@ export default function Onboarding() {
   async function submit() {
     setErr(''); setReasons([]); setBusy('Verifying your details...');
     try {
-      await api('/api/onboarding/submit', { legalName: name.trim(), whatsapp: waNum, trustedContact: { name: tcName.trim(), phone: tcPhone, relation: tcRel }, selfie: live.selfie, id: id.img, stmt: stmt.page, scores: { distance, liveness: C.live }, statement: { name: ps.name, address, addressSource: addrSource, date: ps.date, isPdf: true, producer: stmt.producer, creator: stmt.creator }, agree: true, signedName: signed });
+      await api('/api/onboarding/submit', { legalName: name.trim(), phone: myPhone, whatsapp: waNum, trustedContact: { name: tcName.trim(), phone: tcPhone, relation: tcRel }, selfie: live.selfie, id: id.img, stmt: stmt.page, scores: { distance, liveness: C.live }, statement: { name: ps.name, address, addressSource: addrSource, date: ps.date, isPdf: true, producer: stmt.producer, creator: stmt.creator }, agree: true, signedName: signed });
       try { sessionStorage.removeItem(KEY); } catch {}
       setDone(true);
     } catch (x) { if (x.data?.reasons) setReasons(x.data.reasons); else setErr('Could not send. Check your connection and try again.'); }
@@ -112,13 +98,7 @@ export default function Onboarding() {
       {step === 0 && <>
         <p className="m" style={{ lineHeight: 1.5 }}>Everyone on Conmonie is identity-checked before saving with others. It protects every member&apos;s money.</p>
         <input className="inp" placeholder="Full legal name (as on your ID)" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-        <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <b>Your phone number</b>
-          {vPhone ? <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 15 }}><span className="ibadge ok" style={{ width: 28, height: 28 }}><Icon n="check" s={16} /></span>Verified: {vPhone}</div>
-            : conf ? <><p className="m" style={{ fontSize: 13 }}>We sent a 6-digit code to {phone}.</p><input className="inp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} /><button className="btn" style={{ height: 44 }} disabled={code.trim().length < 6 || !!busy} onClick={confirmCode}>Verify code</button></>
-            : <><p className="m" style={{ fontSize: 13 }}>We send you a code to make sure the number is really yours.</p><input className="inp" type="tel" inputMode="tel" autoComplete="tel" placeholder="e.g. 0801 234 5678" value={phone} onChange={(e) => setPhone(e.target.value)} /><button className="btn2" style={{ height: 44 }} disabled={!!busy} onClick={sendCode}>Send code</button></>}
-          {busy && <Loader inline size={26} label={busy} />}
-        </div>
+        <input className="inp" type="tel" inputMode="tel" autoComplete="tel" placeholder="Your phone number, e.g. 0801 234 5678" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <label style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 14 }}><input type="checkbox" checked={waSame} onChange={(e) => setWaSame(e.target.checked)} style={{ width: 22, height: 22 }} />My WhatsApp number is the same number</label>
         {!waSame && <input className="inp" type="tel" inputMode="tel" placeholder="WhatsApp number" value={wa} onChange={(e) => setWa(e.target.value)} />}
         <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -188,7 +168,6 @@ export default function Onboarding() {
         {step > 0 && !busy ? <button className="pill" style={{ background: '#E3E5E8' }} onClick={() => { setErr(''); setStep(step - 1); }}><Icon n="back" s={16} />&nbsp;Back</button> : <span />}
         <button className="m" style={{ background: 'none', textDecoration: 'underline' }} onClick={() => { try { sessionStorage.removeItem(KEY); } catch {} signOut(auth); }}>Log out</button>
       </div>
-      <div id="rc2" />
     </main>
   );
 }

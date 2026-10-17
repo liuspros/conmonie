@@ -20,7 +20,7 @@ export const AGREEMENT = [
     'To keep a record we can rely on if there is a dispute, and to help the group admin and the authorities act if someone commits fraud.',
     'We do not sell your data and we do not use your ID, selfie or statement for advertising.' ] },
   { t: '4. Who can see your information', p: [
-    'Other members and group admins can see your display name, your Verified badge, your payment status and your streak. They cannot see your ID, selfie, statement, address, phone numbers or trusted contact.',
+    'Other members can see your display name, your Verified badge, your payment status and your streak. The admin of a group you join can also see your legal name, your phone number and your payment record in that group. Nobody else in the group can see your phone number, and no one in the group can see your ID, selfie, statement, address or trusted contact.',
     'Only Conmonie can see the documents you submit, and only a very small number of people at Conmonie can open them.',
     'The exception is clause 6: if you break your promises on purpose, we may share your details with the group admin and with the authorities, as explained there.',
     'We may also share information if the law or a court requires it.' ] },

@@ -19,9 +19,11 @@ export async function POST(req) {
   if (!img(b.selfie, 200000) || !img(b.id, 700000) || !img(b.stmt, 700000) || !b.legalName || String(b.legalName).length > 80) return json({ error: 'bad_request' }, 400);
 
   const why = [], wa = normalizePhone(b.whatsapp), tcPhone = normalizePhone(tc.phone);
-  if (!u.phone) why.push('Verify your phone number with the code we send you.');
+  const phone = normalizePhone(b.phone);
+  if (!phone) why.push('Enter a valid phone number.');
+  else { const dup = await adb().collection('verifications').where('phone', '==', phone).limit(1).get(); if (!dup.empty && dup.docs[0].id !== u.uid) why.push('This phone number is already used by another account.'); }
   if (!wa) why.push('Enter a valid WhatsApp number.');
-  if (String(tc.name || '').trim().length < 3 || !tcPhone || tcPhone === u.phone) why.push('Add a trusted contact with their own phone number.');
+  if (String(tc.name || '').trim().length < 3 || !tcPhone || tcPhone === phone) why.push('Add a trusted contact with their own phone number.');
   if (!sc.liveness) why.push('The live check was not completed.');
   if (!(+sc.distance <= FACE_MAX)) why.push('Your face did not match the photo on your ID. Retake both in good light.');
   if (!st.isPdf) why.push('Upload your bank statement as a PDF.');
@@ -39,7 +41,7 @@ export async function POST(req) {
   const toks = legalName.split(/\s+/), display = toks.length > 1 ? toks[0] + ' ' + toks[toks.length - 1] : legalName;
   const batch = db.batch();
   batch.set(db.doc('verifications/' + u.uid), {
-    status: 'approved', legalName, phone: u.phone, whatsapp: wa, trustedContact: { name: cut(tc.name, 80), phone: tcPhone, relation: cut(tc.relation, 40) }, authEmail: u.email, submittedAt: now, verifiedAt: now,
+    status: 'approved', legalName, phone, whatsapp: wa, trustedContact: { name: cut(tc.name, 80), phone: tcPhone, relation: cut(tc.relation, 40) }, authEmail: u.email, submittedAt: now, verifiedAt: now,
     scores: { distance: +sc.distance, liveness: true },
     statement: { name: cut(st.name, 100), address: cut(st.address, 250), addressSource: st.addressSource === 'typed' ? 'typed' : 'statement', date: cut(st.date, 40), producer: cut(st.producer, 100), creator: cut(st.creator, 100) },
     agreement: { version: AGREEMENT_VERSION, signedName: cut(b.signedName, 80), at: now, ip: cut((req.headers.get('x-forwarded-for') || '').split(',')[0], 60), userAgent: cut(req.headers.get('user-agent'), 200) },

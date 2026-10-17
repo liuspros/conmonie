@@ -8,6 +8,7 @@ import { naira, haptic, compressImage, sha256 } from '@/lib/utils';
 import Skeleton from '@/components/Skeleton';
 import Loader from '@/components/Loader';
 import Icon from '@/components/Icon';
+import OpayButton from '@/components/OpayButton';
 
 export default function GoalPay() {
   const { id } = useParams(), r = useRouter(), { user } = useRequireAuth();
@@ -55,6 +56,7 @@ export default function GoalPay() {
         <div className="r"><span style={{ fontSize: 28, fontWeight: 700, letterSpacing: 1 }}>{info.acct?.number || 'Not set'}</span>
           <button onClick={copy} aria-label="Copy account number" style={{ minWidth: 44, height: 44, borderRadius: 14, padding: '0 10px', background: 'rgba(255,255,255,.16)', color: '#fff', fontSize: 13 }}>{copied ? 'Copied' : <Icon n="copy" s={20} />}</button></div>
         <div>{info.acct?.name}</div></div>
+      <OpayButton account={info.acct?.number} />
       <p className="m" style={{ textAlign: 'center', fontSize: 13 }}>Pay from your bank app, then upload the receipt. Money goes straight to this account.</p>
       <label className="btn2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }}><Icon n="camera" />Upload receipt<input type="file" accept="image/*" multiple onChange={onFile} style={{ display: 'none' }} /></label>
       {rec.map((q) => (

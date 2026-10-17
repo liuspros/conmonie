@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, setDoc, writeBatch } from 'firebase/firestore';
@@ -8,16 +8,18 @@ import { useRequireAuth } from '@/context/AuthContext';
 import BankSelect from '@/components/BankSelect';
 import Loader from '@/components/Loader';
 import Icon from '@/components/Icon';
+import { useKyc } from '@/context/KycContext';
 
 const CATS = ['Equipment', 'Trip', 'Event', 'Project', 'Emergency', 'Celebration', 'Other'];
 const L = ({ l, children }) => <label className="m" style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, flex: 1, minWidth: 0 }}>{l}{children}</label>;
 export default function NewGoal() {
-  const { user, profile } = useRequireAuth(), r = useRouter();
+  const { user, profile } = useRequireAuth(), r = useRouter(), { requireKyc } = useKyc();
+  useEffect(() => { if (profile && !profile.verified) requireKyc(); }, [profile]);
   const tomorrow = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
   const [f, setF] = useState({ name: '', desc: '', cat: 'Equipment', target: '', date: tomorrow, suggested: '', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function create(e) {
-    e.preventDefault(); setErr('');
+    e.preventDefault(); setErr(''); if (!requireKyc()) return;
     if (!navigator.onLine) return setErr('You are offline. Connect to the internet to create a ConGoal.');
     const deadline = new Date(f.date + 'T23:59:00+01:00').getTime();
     if (!(deadline > Date.now())) return setErr('Pick a deadline in the future.');

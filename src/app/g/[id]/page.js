@@ -27,6 +27,7 @@ const actInfo = (m) => {
   const t = m.text || '';
   if (m.type === 'confirmed') return ['ok', 'check', t.replace(' by admin', ''), null];
   if (m.kind === 'submitted') return ['wait', 'clock', t, null];
+  if (m.kind === 'attached') return ['wait', 'doc', t, null];
   if (/not accepted/.test(t)) { const [a, b] = t.split(': '); return ['rej', 'x', a.replace('receipt was not accepted', 'receipt was rejected'), b ? 'Reason: ' + b : null]; }
   if (/joined/.test(t)) return ['', 'users', t, null];
   return ['', 'info', t, null];
@@ -34,7 +35,7 @@ const actInfo = (m) => {
 
 export default function Group() {
   const { id } = useParams(), r = useRouter(), { user, profile } = useRequireAuth();
-  const [g, setG] = useState(), [members, setMembers] = useState({}), [msgs, setMsgs] = useState([]), [cons, setCons] = useState([]), [reqs, setReqs] = useState([]);
+  const [g, setG] = useState(), [members, setMembers] = useState({}), [msgs, setMsgs] = useState([]), [cons, setCons] = useState([]), [reqs, setReqs] = useState([]), [pendAll, setPendAll] = useState([]);
   const [packer, setPacker] = useState(null), [text, setText] = useState(''), [recs, setRecs] = useState({}), [openList, setOpenList] = useState(true), [allAct, setAllAct] = useState(false), [err, setErr] = useState('');
   const endRef = useRef(null);
   const ci = useMemo(() => (g ? cycleInfo(g) : null), [g]);
@@ -53,6 +54,8 @@ export default function Group() {
   useEffect(() => { if (ci && ci.packerUid) getDoc(doc(db, 'users', ci.packerUid)).then((s) => setPacker({ uid: ci.packerUid, ...s.data() })); }, [ci && ci.packerUid]);
   const loadReqs = () => api('/api/requests/list?gid=' + id).then((j) => setReqs(j.items)).catch(() => {});
   useEffect(() => { if (isAdmin) loadReqs(); }, [isAdmin]);
+  useEffect(() => { if (!isAdmin) return; return onSnapshot(query(collection(db, 'groups', id, 'contributions'), where('status', '==', 'pending')), (s) => setPendAll(s.docs.map((d) => ({ id: d.id, ...d.data() }))), () => {}); }, [isAdmin, id]);
+  useEffect(() => { setRecs({}); }, [pendAll.map((c) => c.id + ':' + (c.updatedAt || 0)).join('|')]);
   useEffect(() => { endRef.current && endRef.current.scrollIntoView({ block: 'end' }); }, [msgs.length]);
 
   const send = async (e) => { e.preventDefault(); const t = text.trim(); if (!t) return; setText(''); await addDoc(collection(db, 'groups', id, 'messages'), { type: 'text', text: t, uid: user.uid, name: profile?.name || 'Member', at: Date.now() }); };
@@ -76,6 +79,12 @@ export default function Group() {
     sys(b, { type: 'system', text: c.name + "'s receipt was not accepted: " + why, amount: c.required }, Date.now());
     await b.commit(); notify('rejected', id, c.uid);
   }
+  async function hold(c) {
+    const bal = Math.max(0, c.required - (c.received || 0)), b = writeBatch(db), t = Date.now();
+    b.update(doc(db, 'groups', id, 'contributions', c.id), { held: true, heldAt: t });
+    sys(b, { type: 'system', text: c.name + "'s payment is on hold as pending" + (bal ? ' (balance ' + naira(bal) + ')' : ''), amount: c.received || null }, t);
+    await b.commit(); haptic(); notify('held', id, c.uid);
+  }
   async function paidPacker() { const b = writeBatch(db); b.update(doc(db, 'groups', id), { packedCycle: ci.k }); sys(b, { type: 'system', text: 'Admin paid ' + (packer?.name || 'the packer') + ' for this round' }, Date.now()); await b.commit(); notify('packed', id, packer?.uid); }
   async function decide(uid, decision) { try { await api('/api/requests/decide', { gid: id, uid, decision }); haptic(); } catch { setErr('Could not save that decision.'); } loadReqs(); }
   async function showRec(c) { if (recs[c.id]) return; const s = await getDocs(query(collection(db, 'groups', id, 'receipts'), where('cid', '==', c.id))); setRecs((p) => ({ ...p, [c.id]: s.docs.map((d) => d.data()) })); }
@@ -83,7 +92,7 @@ export default function Group() {
   if (!g) return <main className="app"><Skeleton n={4} h={90} /></main>;
   const stOf = (uid) => { const l = cons.filter((c) => c.uid === uid).sort((a, b) => b.createdAt - a.createdAt), ok = l.find((c) => c.status === 'confirmed'); if (ok) return { s: 'confirmed', c: ok }; const p = l.find((c) => c.status === 'pending'); if (p) return { s: 'pending', c: p }; return l.length ? { s: 'rejected', c: l[0] } : { s: 'none' }; };
   const rows = g.members.map((u) => ({ u, ...stOf(u) })), count = (k) => rows.filter((x) => x.s === k).length;
-  const pending = cons.filter((c) => c.status === 'pending'), locked = g.onlyAdminsPost && !isAdmin, me = stOf(user.uid);
+  const pending = isAdmin ? pendAll : cons.filter((c) => c.status === 'pending'), locked = g.onlyAdminsPost && !isAdmin, me = stOf(user.uid);
   const acts = msgs.filter((m) => m.type === 'system' || m.type === 'confirmed').slice().reverse(), shown = allAct ? acts : acts.slice(0, 4);
   const todo = isAdmin && (pending.length > 0 || reqs.length > 0 || (ci.isPackingDay && packer && g.packedCycle !== ci.k));
   return (
@@ -116,14 +125,15 @@ export default function Group() {
             </div>); })}
           {pending.map((c) => (
             <div key={c.id} style={{ background: 'rgba(255,255,255,.1)', borderRadius: 16, padding: 12, fontSize: 13 }}>
-              <div className="r"><b>{c.name}</b><span>{c.count} &times; &middot; {naira(c.required)}{c.late ? ' (late)' : ''}</span></div>
+              <div className="r"><span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}><b>{c.name}</b>{c.updatedAt > c.createdAt + 1000 && <span className="tag">Updated</span>}{c.held && <span className="tag">On hold</span>}{c.partial && <span className="tag">Deposit</span>}</span><span>{c.count} &times; &middot; {naira(c.required)}{c.late ? ' (late)' : ''}</span></div>
+              <div style={{ color: '#B8BCC2', marginTop: 4 }}>Received {c.received != null ? naira(c.received) : 'not read'} of {naira(c.required)}{c.cycle !== ci.k ? ' \u00B7 earlier round' : ''} \u00B7 sent {when(c.createdAt)}</div>
               {!recs[c.id] ? <button className="pill" style={{ marginTop: 8 }} onClick={() => showRec(c)}>View receipts</button> : recs[c.id].map((x, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                   <img src={x.image} alt="Receipt" style={{ width: 72, height: 96, objectFit: 'cover', borderRadius: 8 }} />
                   <div style={{ lineHeight: 1.6 }}>Amount: {x.extracted?.amount != null ? naira(x.extracted.amount) : 'could not read'}<br />Sender: {x.extracted?.senderName || 'unknown'}<br />{x.flags?.length ? 'Flags: ' + x.flags.join(', ') : 'No flags'}</div>
                 </div>))}
               <div style={{ color: '#B8BCC2', marginTop: 6 }}>Checks are flags. Confirm against your bank alert.</div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}><button className="pill g" style={{ flex: 1, justifyContent: 'center' }} onClick={() => confirm(c)}>Mark contribution</button><button className="pill" style={{ background: 'transparent', color: '#fff', border: '1px solid #6B7076' }} onClick={() => reject(c)}>Reject</button></div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}><button className="pill g" style={{ flex: 1, justifyContent: 'center' }} onClick={() => confirm(c)}>Mark contribution</button><button className="pill" onClick={() => hold(c)}>Hold</button><button className="pill" style={{ background: 'transparent', color: '#fff', border: '1px solid #6B7076' }} onClick={() => reject(c)}>Reject</button></div>
             </div>))}
         </div>}
 

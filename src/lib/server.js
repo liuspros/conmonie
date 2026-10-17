@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { cfg } from '@/lib/config';
 import { adb } from '@/lib/admin';
+import { FREE, CREATOR_LIMIT_MSG, JOIN_LIMIT_MSG, proActive } from '@/lib/plans';
 
 export const json = (o, status = 200) => NextResponse.json(o, { status });
 const secret = () => process.env.SIGNING_SECRET || process.env.CRON_SECRET || 'conmonie-dev';
@@ -48,3 +49,16 @@ export async function loadGoal(gid, uid) {
   return g && g.members.includes(uid) ? g : null;
 }
 export async function goalAcct(gid) { const p = await adb().doc(`goals/${gid}/private/acct`).get(); return p.exists ? p.data() : null; }
+
+// Admins of a group: the creator plus any extra admins listed in `admins`.
+export const adminsOf = (g) => [g.adminId, ...(g.admins || [])].filter(Boolean);
+// Plan limits for joining an Ajo. Returns null when the join is allowed, or { code, error } when it is not.
+export async function joinBlock(g, uid) {
+  if (!g.creatorIsProSnapshot && g.members.length >= FREE.groupMembers) return { code: 'CREATOR_LIMIT_EXCEEDED', error: CREATOR_LIMIT_MSG };
+  const u = (await adb().doc('users/' + uid).get()).data() || {};
+  if (!proActive(u)) {
+    const n = (await adb().collection('groups').where('members', 'array-contains', uid).get()).docs.filter((d) => d.data().adminId !== uid).length;
+    if (n >= FREE.joinedGroups) return { code: 'USER_JOIN_LIMIT_EXCEEDED', error: JOIN_LIMIT_MSG };
+  }
+  return null;
+}

@@ -12,6 +12,9 @@ import GoalRing from '@/components/GoalRing';
 import Tour from '@/components/Tour';
 import InstallBanner from '@/components/InstallBanner';
 import { isStandalone } from '@/context/InstallContext';
+import { useKyc } from '@/context/KycContext';
+import { useAlarm } from '@/context/AlarmContext';
+import { cycleInfo, naira } from '@/lib/utils';
 
 const HSTEPS = [
   { title: 'Welcome to Conmonie', body: 'Save together with people you can trust. This quick tour shows you around. You can skip it anytime.' },
@@ -28,7 +31,7 @@ const HSTEPS = [
 ];
 
 export default function Home() {
-  const { user, profile } = useRequireAuth(), r = useRouter();
+  const { user, profile } = useRequireAuth(), r = useRouter(), { requireKyc, promptFirst } = useKyc(), { schedule, cancel } = useAlarm();
   const [hi, setHi] = useState('Hello'), [unread, setUnread] = useState(0), [ajos, setAjos] = useState(null), [goals, setGoals] = useState(null), [streak, setStreak] = useState(0), [ajoTotal, setAjoTotal] = useState(0), [goalTotal, setGoalTotal] = useState(0);
   const [hide, setHide] = useState(false), [tip, setTip] = useState(false), [link, setLink] = useState(''), [open, setOpen] = useState(false), [sheet, setSheet] = useState(false), [tourDone, setTourDone] = useState(false), [showInstall, setShowInstall] = useState(false);
 
@@ -38,6 +41,9 @@ export default function Home() {
       const gs = s.docs.map((d) => ({ id: d.id, ...d.data() })); setAjos(gs.length);
       const ex = await Promise.all(gs.map(async (g) => {
         const [m, mine] = await Promise.all([getDoc(doc(db, 'groups', g.id, 'members', user.uid)).catch(() => null), getDocs(query(collection(db, 'groups', g.id, 'contributions'), where('uid', '==', user.uid))).catch(() => null)]);
+        const ci = cycleInfo(g), paid = !!(mine && mine.docs.some((d) => d.data().cycle === ci.k && d.data().status !== 'rejected')), amt = naira(g.amount + (g.packingFee || 0)), ids = ['due1-' + g.id + '-' + ci.k, 'due0-' + g.id + '-' + ci.k];
+        if (paid) ids.forEach(cancel);
+        else { schedule({ id: ids[0], at: ci.due - 3600000, title: 'Payment due in 1 hour', body: g.name + ': pay ' + amt, link: '/g/' + g.id + '/pay' }); schedule({ id: ids[1], at: ci.due, title: 'Payment due now', body: g.name + ': pay ' + amt, link: '/g/' + g.id + '/pay' }); }
         return { streak: m && m.exists() ? m.data().streak || 0 : 0, total: mine ? mine.docs.reduce((t, d) => (d.data().status === 'confirmed' ? t + (d.data().required || 0) : t), 0) : 0 };
       }));
       setStreak(Math.max(0, ...ex.map((e) => e.streak))); setAjoTotal(ex.reduce((t, e) => t + e.total, 0));
@@ -58,6 +64,7 @@ export default function Home() {
     try { if (!localStorage.getItem('conmonie-install-seen')) { localStorage.setItem('conmonie-install-seen', '1'); setShowInstall(true); } } catch {}
   }, [tourDone]);
   useEffect(() => { const h = new Date().getHours(); setHi(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'); }, []);
+  useEffect(() => { if (tourDone && profile && !profile.verified) promptFirst(); }, [tourDone, profile]);
   const toggle = () => { const n = !hide; setHide(n); try { localStorage.setItem('conmonie-hide', n ? '1' : '0'); } catch {} };
   const goJoin = () => { const c = link.trim().split('/').filter(Boolean).pop(); if (c) r.push('/join/' + c); };
   const total = ajoTotal + goalTotal, tgt = (goals || []).reduce((t, g) => t + (g.target || 0), 0), col = (goals || []).reduce((t, g) => t + (g.collected || 0), 0), pct = tgt ? Math.round((col / tgt) * 100) : 0;
@@ -84,7 +91,7 @@ export default function Home() {
           <span className="st nd" style={{ background: 'rgba(200,241,53,.16)', color: '#C8F135' }}><Icon n="flame" s={14} />{streak} streak</span></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
-        <button data-tour="create" className="glass act" onClick={() => setSheet(true)}><Icon n="plus" />Create</button>
+        <button data-tour="create" className="glass act" onClick={() => requireKyc() && setSheet(true)}><Icon n="plus" />Create</button>
         <button data-tour="join" className="glass act" onClick={() => setOpen(!open)}><Icon n="link" />Join</button>
         <Link data-tour="scan" href="/scan" className="glass act"><Icon n="scan" />Scan</Link>
       </div>

@@ -8,7 +8,7 @@ export const maxDuration = 30;
 export async function POST(req) {
   if (!adminReady()) return json({ error: 'not_configured' }, 501);
   const u = await authUser(req); if (!u) return json({ error: 'unauthorized' }, 401);
-  const { gid, count, receipts } = await req.json().catch(() => ({})), g = await loadGroup(gid, u.uid);
+  const { gid, count, receipts, partial } = await req.json().catch(() => ({})), g = await loadGroup(gid, u.uid);
   if (!g) return json({ error: 'forbidden' }, 403);
   const n = Math.floor(+count);
   if (!(n >= 1 && n <= 20) || !Array.isArray(receipts) || receipts.length < 1 || receipts.length > 4) return json({ error: 'bad_request' }, 400);
@@ -34,17 +34,18 @@ export async function POST(req) {
     if (!x || x.amount == null) { flags.push('could not be read'); unread = true; } else total += +x.amount || 0;
     rows.push({ img, hash, x, flags });
   }
-  if (!unread && total < required) return json({ error: 'short', total, required }, 400);
+  if (!unread && total < required && !partial) return json({ error: 'short', total, required }, 400);
+  const isPartial = !unread && total < required;
 
   const b = db.batch(), cref = db.collection(`groups/${gid}/contributions`).doc(), at = Date.now();
-  b.set(cref, { uid: u.uid, name: me.name || 'Member', cycle: ci.k, count: n, required, late: ci.late, status: 'pending', createdAt: at });
-  b.set(db.collection(`groups/${gid}/messages`).doc(), { type: 'system', kind: 'submitted', text: (me.name || 'A member') + ' submitted payment', amount: required, uid: u.uid, at });
+  b.set(cref, { uid: u.uid, name: me.name || 'Member', cycle: ci.k, count: n, required, late: ci.late, status: 'pending', createdAt: at, updatedAt: at, received: total, partial: isPartial, receiptCount: rows.length });
+  b.set(db.collection(`groups/${gid}/messages`).doc(), { type: 'system', kind: 'submitted', text: (me.name || 'A member') + (isPartial ? ' sent a deposit of \u20A6' + total.toLocaleString('en-NG') + ' toward their payment' : ' submitted payment'), amount: isPartial ? total : required, uid: u.uid, at });
   for (const q of rows) {
     b.set(db.collection(`groups/${gid}/receipts`).doc(), { uid: u.uid, cid: cref.id, image: q.img, hash: q.hash, extracted: q.x, flags: q.flags, createdAt: at });
     b.set(db.doc(`groups/${gid}/refs/${q.hash}`), { uid: u.uid });
     if (q.x && q.x.reference) b.set(db.doc(`groups/${gid}/refs/r_${safeId(q.x.reference)}`), { uid: u.uid });
   }
   await b.commit();
-  await push([g.adminId], { title: g.name, body: (me.name || 'A member') + ' sent a receipt for you to confirm.', link: '/g/' + gid });
+  await push([g.adminId], { title: g.name, body: (me.name || 'A member') + (isPartial ? ' sent a deposit (\u20A6' + total.toLocaleString('en-NG') + ' of \u20A6' + required.toLocaleString('en-NG') + '). You can hold it as pending until the balance is paid.' : ' sent a receipt for you to confirm.'), link: '/g/' + gid });
   return json({ ok: true });
 }

@@ -11,15 +11,18 @@ import Icon, { IconBadge } from '@/components/Icon';
 import Skeleton from '@/components/Skeleton';
 import BankSelect from '@/components/BankSelect';
 import QrSheet from '@/components/QrSheet';
+import PingTools from '@/components/PingTools';
+import { api } from '@/lib/api';
+import { proActive } from '@/lib/plans';
 
 const Switch = ({ on, onClick, label }) => <button className="sw" role="switch" aria-checked={on} aria-label={label} onClick={onClick} style={{ background: on ? '#C8F135' : '#C7CBD0' }}><span style={{ left: on ? 23 : 3 }} /></button>;
 const Head = ({ icon, title, sub, right }) => <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}><IconBadge n={icon} /><div style={{ flex: 1, minWidth: 0 }}><b>{title}</b><div className="m" style={{ fontSize: 13 }}>{sub}</div></div>{right}</div>;
 const MS = { confirmed: ['st-ok', 'Contributed'], pending: ['st-wait', 'Pending'], none: ['st-none', 'Not paid'] };
 
 export default function Info() {
-  const { id } = useParams(), r = useRouter(), { user } = useRequireAuth();
+  const { id } = useParams(), r = useRouter(), { user, profile } = useRequireAuth();
   const [g, setG] = useState(), [members, setMembers] = useState({}), [cons, setCons] = useState([]), [order, setOrder] = useState(null), [form, setForm] = useState(null), [copied, setCopied] = useState(false), [err, setErr] = useState('');
-  const [acct, setAcct] = useState(null), [acctSaved, setAcctSaved] = useState(false), [orderOpen, setOrderOpen] = useState(false), [manage, setManage] = useState(false), [qr, setQr] = useState(false);
+  const [acct, setAcct] = useState(null), [acctSaved, setAcctSaved] = useState(false), [orderOpen, setOrderOpen] = useState(false), [manage, setManage] = useState(false), [qr, setQr] = useState(false), [mdet, setMdet] = useState(null);
   useEffect(() => {
     if (!user) return;
     const off = [
@@ -33,6 +36,7 @@ export default function Info() {
   useEffect(() => {
     if (g && g.adminId === user.uid && !acct) getDoc(doc(db, 'groups', id, 'private', 'acct')).then((s) => setAcct(s.exists() ? s.data() : { bank: '', number: '', name: '' })).catch(() => setAcct({ bank: '', number: '', name: '' }));
   }, [g && g.adminId]);
+  useEffect(() => { if (g && g.adminId === user.uid) api('/api/members?gid=' + id).then((j) => setMdet(j.members)).catch(() => {}); }, [g && g.members.length]);
   if (!g) return <main className="app"><Skeleton n={4} h={90} /></main>;
 
   const admin = g.adminId === user.uid, ord = order || g.order, f = form || { name: g.name, desc: g.description || '' }, url = location.origin + '/join/' + g.inviteCode;
@@ -110,6 +114,13 @@ export default function Info() {
           </div>
         </div>
 
+        {admin && mdet && <div className="glass"><Head icon="shield" title="Member details" sub="Only admins can see legal names, phone numbers and payment records." />
+          <div style={{ marginTop: 6 }}>{mdet.filter((m) => m.role !== 'admin').map((m) => (
+            <details key={m.uid} className="rowline" style={{ display: 'block' }}>
+              <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 12 }}><Av i={m.avatar} size={36} label={m.name} /><b style={{ flex: 1 }}>{m.name}</b><Icon n="down" s={16} /></summary>
+              <div style={{ fontSize: 14, lineHeight: 1.8, padding: '8px 0 0 48px' }}>Legal name: <b>{m.legalName || 'Not verified yet'}</b><br />Phone: {m.phoneNumber ? <><a href={'tel:' + m.phoneNumber} style={{ color: 'inherit', fontWeight: 600 }}>{m.phoneNumber}</a> &middot; <a href={'https://wa.me/' + m.phoneNumber.replace(/\D/g, '')} style={{ color: 'inherit' }}>WhatsApp</a></> : 'Not provided'}<br /><span className="m">{m.record.confirmed} paid &middot; {m.record.pending} pending &middot; {m.record.rejected} rejected &middot; {m.record.late} late &middot; best streak {m.record.bestStreak} &middot; {naira(m.record.totalConfirmed)} confirmed</span></div>
+            </details>))}</div></div>}
+        {admin && <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}><Head icon="bell" title="Group tools" sub="Reminders for members who still owe this round." /><PingTools gid={id} isPro={proActive(profile)} /></div>}
         {admin && acct && <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Head icon="bank" title="Payment account" sub="The account members pay into." right={<span className="m" style={{ fontSize: 12 }}>Access: Admins only</span>} />
           <BankSelect value={acct.bank} onChange={(v) => setAcct({ ...acct, bank: v })} />

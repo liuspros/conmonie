@@ -11,10 +11,11 @@ import TabBar from '@/components/TabBar';
 import Skeleton from '@/components/Skeleton';
 import Loader from '@/components/Loader';
 import Icon from '@/components/Icon';
+import { useKyc } from '@/context/KycContext';
 
 const ERR = { already_requested: 'You already asked to join this group.', already_member: 'You are already in this group.', not_public: 'This group is no longer public.', not_verified: 'Finish your identity check first.' };
 export default function Feed() {
-  const { user } = useRequireAuth();
+  const { user } = useRequireAuth(), { requireKyc } = useKyc();
   const [items, setItems] = useState(null), [mine, setMine] = useState(new Set()), [reqs, setReqs] = useState({}), [q, setQ] = useState(''), [sheet, setSheet] = useState(null), [msg, setMsg] = useState(''), [ok, setOk] = useState(false), [busy, setBusy] = useState(false), [err, setErr] = useState('');
   const loadReqs = () => getDocs(query(collection(db, 'joinRequests'), where('uid', '==', user.uid))).then((s) => setReqs(Object.fromEntries(s.docs.map((d) => [d.data().gid, d.data().status])))).catch(() => {});
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function Feed() {
           {mine.has(g.id) ? <Link href={'/g/' + g.id} className="btn2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', height: 46 }}>Open group</Link>
             : reqs[g.id] === 'pending' ? <div style={{ display: 'flex', gap: 8 }}><span className="st st-wait" style={{ flex: 1, justifyContent: 'center', height: 46 }}>Request sent</span><button className="btn2" style={{ height: 46, width: 110 }} onClick={() => cancel(g.id)}>Cancel</button></div>
             : reqs[g.id] === 'declined' ? <span className="st st-rej" style={{ justifyContent: 'center', height: 46 }}>Request not accepted</span>
-            : <button className="btn" style={{ height: 46 }} onClick={() => { setErr(''); setSheet(g); }}>Request to join</button>}
+            : <button className="btn" style={{ height: 46 }} onClick={() => { if (!requireKyc()) return; setErr(''); setSheet(g); }}>Request to join</button>}
         </div>))}
       {sheet && (
         <div role="dialog" aria-modal="true" aria-label="Request to join" onClick={() => !busy && setSheet(null)} style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'rgba(10,10,12,.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>

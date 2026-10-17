@@ -52,3 +52,12 @@ Push to GitHub, import in Vercel, add the variables from `.env.example` and depl
 - **Receipts:** Transactions (Activities tab) opens a shareable receipt image (`lib/receipt.js`) for Ajo and ConGoal payments.
 - **Installed app:** pull down from the top to refresh (`components/PullToRefresh.js`).
 - Face models and the PDF worker are copied into `public/` by `scripts/copy-assets.js` on `npm install`. Republish `firestore.rules` after updating.
+
+## Plans, alarm, KYC timing and deposits
+- **Conmonie Pro** (`/pro`): Free groups hold 5 members and a free account can join 10 groups (enforced in `/api/join` and when admins approve requests). Pro unlocks unlimited members/joins and the **Ping Trigger** (`/api/ping`, admin + Pro only). Plan fields on `users` (`isPro`, `proExpiresAt`, `joinedGroupsCount`) and `groups.creatorIsProSnapshot` are written only by the server. Set the price with `NEXT_PUBLIC_PRO_PRICE` (default 2000).
+- **Paystack:** needs `PAYSTACK_SECRET_KEY`. `/api/billing/init` (hosted checkout, channels `bank_transfer` and `bank`; Paystack's `mobile_money` channel is Ghana/Kenya only), `/api/billing/transfer` (Charge API: dedicated transfer account for the custom desk; needs Pay with Transfer enabled on your Paystack account), `/api/billing/webhook` (set it in Paystack: `https://YOUR-DOMAIN/api/billing/webhook`). Expired plans are downgraded by the 15-minute cron.
+- **Reminder alarm:** `lib/alarm.js` loops `/sounds/alarm.mp3` for exactly 10 seconds, unlocked by the first tap; `context/AlarmContext.js` stores and arms reminders (Home schedules due reminders); server alarms (`alarm: '1'` push) ring in-app or show a notification that stays until tapped. The sound is precached by `public/sw.js`.
+- **OPay button:** `lib/opay.js`. Confirm the Android package id against OPay's Play Store URL.
+- **KYC is asked for late:** people can browse; the popup appears at first sign-in and again when they try to join or create. SMS verification and phone sign-in are removed for now.
+- **Deposits:** a member can send a partial payment as a deposit, and add more receipts to a pending payment (`/api/contribute/attach`). Admins see "Received X of Y", can Hold, Confirm or Reject, and are notified of every change.
+- **Phone privacy:** `/api/members` returns legal names, phone numbers and payment records only to a group admin.

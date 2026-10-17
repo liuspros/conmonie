@@ -4,6 +4,8 @@ import { LockProvider } from '@/context/LockContext';
 import OfflineBanner from '@/components/OfflineBanner';
 import SWRegister from '@/components/SWRegister';
 import Gate from '@/components/Gate';
+import { AlarmProvider } from '@/context/AlarmContext';
+import { KycProvider } from '@/context/KycContext';
 import PullToRefresh from '@/components/PullToRefresh';
 import { InstallProvider } from '@/context/InstallContext';
 
@@ -19,7 +21,7 @@ export const viewport = { themeColor: '#0A0A0A', viewportFit: 'cover', width: 'd
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body><AuthProvider><InstallProvider><OfflineBanner /><PullToRefresh /><SWRegister /><LockProvider><Gate>{children}</Gate></LockProvider></InstallProvider></AuthProvider></body>
+      <body><AuthProvider><InstallProvider><OfflineBanner /><PullToRefresh /><SWRegister /><AlarmProvider><LockProvider><Gate><KycProvider>{children}</KycProvider></Gate></LockProvider></AlarmProvider></InstallProvider></AuthProvider></body>
     </html>
   );
 }

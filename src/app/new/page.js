@@ -1,23 +1,25 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addDoc, collection, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useRequireAuth } from '@/context/AuthContext';
 import { midnight, publicDoc } from '@/lib/utils';
 import BankSelect from '@/components/BankSelect';
+import { useKyc } from '@/context/KycContext';
 
 const L = ({ l, children }) => <label className="m" style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, flex: 1, minWidth: 0 }}>{l}{children}</label>;
 
 export default function NewAjo() {
-  const { user, profile } = useRequireAuth(), r = useRouter();
+  const { user, profile } = useRequireAuth(), r = useRouter(), { requireKyc } = useKyc();
+  useEffect(() => { if (profile && !profile.verified) requireKyc(); }, [profile]);
   const [f, setF] = useState({ name: '', desc: '', amount: '2000', frequencyDays: '3', dueTime: '18:00', lateFee: '0', packingFee: '0', bank: '', number: '', acctName: '' }), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [pub, setPub] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   async function create(e) {
-    e.preventDefault(); if (!navigator.onLine) { setErr('You are offline. Connect to the internet to create an Ajo.'); return; } setBusy(true); setErr('');
+    e.preventDefault(); if (!requireKyc()) return; if (!navigator.onLine) { setErr('You are offline. Connect to the internet to create an Ajo.'); return; } setBusy(true); setErr('');
     const gref = doc(collection(db, 'groups')), code = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
     const g = { name: f.name.trim(), description: f.desc.trim(), adminId: user.uid, adminName: profile?.name || 'Admin', amount: +f.amount, frequencyDays: +f.frequencyDays, dueTime: f.dueTime, lateFee: +f.lateFee,
-      packingFee: +f.packingFee || 0, public: pub, members: [user.uid], order: [user.uid], memberCount: 1, startAt: midnight(Date.now()), inviteCode: code, createdAt: Date.now() };
+      packingFee: +f.packingFee || 0, public: pub, creatorIsProSnapshot: profile?.isPro === true, members: [user.uid], order: [user.uid], memberCount: 1, startAt: midnight(Date.now()), inviteCode: code, createdAt: Date.now() };
     const b = writeBatch(db);
     b.set(gref, g);
     b.set(doc(db, 'invites', code), { gid: gref.id, adminId: user.uid, adminName: g.adminName, name: g.name, amount: g.amount, frequencyDays: g.frequencyDays, lateFee: g.lateFee });

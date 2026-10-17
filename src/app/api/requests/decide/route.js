@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adb, push, adminReady } from '@/lib/admin';
-import { authUser, json } from '@/lib/server';
+import { authUser, joinBlock, json } from '@/lib/server';
 export const runtime = 'nodejs';
 
 // The admin approves (accepting the risk) or declines; the requester may cancel their own request.
@@ -13,6 +13,7 @@ export async function POST(req) {
   if (decision === 'cancel') { if (u.uid !== uid) return json({ error: 'forbidden' }, 403); await ref.delete(); return json({ ok: true }); }
   if (u.uid !== g.adminId || !['approve', 'decline'].includes(decision)) return json({ error: 'forbidden' }, 403);
   if (decision === 'decline') { await ref.update({ status: 'declined', decidedAt: Date.now() }); await push([uid], { title: g.name, body: 'Your request to join was not accepted.', link: '/feed' }); return json({ ok: true }); }
+  if (!g.members.includes(uid)) { const blk = await joinBlock(g, uid); if (blk) return json(blk, 403); }
   if (!g.members.includes(uid)) {
     const b = db.batch(), now = Date.now();
     b.update(db.doc('groups/' + gid), { members: FieldValue.arrayUnion(uid), order: FieldValue.arrayUnion(uid), memberCount: FieldValue.increment(1) });

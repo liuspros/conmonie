@@ -14,6 +14,8 @@ import VerifyCard from '@/components/VerifyCard';
 import InstallSettings from '@/components/InstallSettings';
 import BiometricSettings from '@/components/BiometricSettings';
 import PushToggle from '@/components/PushToggle';
+import PlanCard from '@/components/PlanCard';
+import AlarmSettings from '@/components/AlarmSettings';
 import { clearBio } from '@/lib/biometric';
 
 const Field = ({ icon, children }) => <div style={{ position: 'relative' }}><span style={{ position: 'absolute', left: 14, top: 15, color: '#B8BCC2', zIndex: 1 }}><Icon n={icon} s={20} /></span>{children}</div>;
@@ -45,7 +47,7 @@ export default function Me() {
         <Field icon="user"><input className="inp" style={dk} placeholder="Account name" value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} required /></Field>
         <button className="btn">{saved ? 'Saved' : 'Save account'}</button>
       </form>
-      <VerifyCard /><InstallSettings /><BiometricSettings /><PushToggle />
+      <PlanCard /><VerifyCard /><InstallSettings /><BiometricSettings /><PushToggle /><AlarmSettings />
       <div className="glass" style={{ padding: '4px 16px' }}>
         <Row icon="compass" label="How it works" href="/how" /><Row icon="book" label="App guide" onClick={guide} /><Row icon="doc" label="Member agreement" href="/agreement" />
         <Row icon="doc" label="Terms and conditions" href="/terms" /><Row icon="shield" label="Privacy and policy" href="/privacy" />

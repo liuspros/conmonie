@@ -20,6 +20,7 @@ export async function POST(req) {
   else if (admin && g.members.includes(target) && event === 'confirmed') { to = [target]; body = 'Your contribution was confirmed by the admin.'; }
   else if (admin && g.members.includes(target) && event === 'rejected') { to = [target]; body = 'Your receipt was not accepted. Open the group to see why.'; }
   else if (admin && g.members.includes(target) && event === 'packed') { to = [target]; body = 'The admin has paid you for this round. Check your account.'; }
+  else if (admin && g.members.includes(target) && event === 'held') { to = [target]; body = 'Your admin is holding your payment as pending. Open the group to see the balance and add another receipt.'; }
   else return NextResponse.json({ error: 'bad_event' }, { status: 400 });
   return NextResponse.json({ sent: await push(to, { title, body, link }) });
 }

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adb, push, adminReady } from '@/lib/admin';
+import { proActive } from '@/lib/plans';
+import { syncSnapshots } from '@/lib/billing';
 import { cycleInfo, naira } from '@/lib/utils';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -14,6 +16,8 @@ export async function GET(req) {
   if (!adminReady() || !process.env.CRON_SECRET) return NextResponse.json({ error: 'not_configured' }, { status: 501 });
   if (req.headers.get('authorization') !== 'Bearer ' + process.env.CRON_SECRET) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const now = Date.now(), db = adb(); let n = 0;
+  // Pro plans that have run out go back to Free (and the groups' snapshots follow)
+  for (const d of (await db.collection('users').where('isPro', '==', true).get()).docs) if (!proActive(d.data(), now)) { await d.ref.update({ isPro: false }); await syncSnapshots(d.id, false); }
   for (const d of (await db.collection('groups').get()).docs) {
     const g = d.data(), id = d.id, ci = cycleInfo(g, now), link = '/g/' + id;
     if (g.acct) { await db.doc(`groups/${id}/private/acct`).set(g.acct, { merge: true }); await d.ref.update({ acct: FieldValue.delete() }); } // older groups: hide the account from members
